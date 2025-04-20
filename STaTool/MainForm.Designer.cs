@@ -1,5 +1,5 @@
 ﻿namespace STaTool {
-    partial class Form1 {
+    partial class MainForm {
         /// <summary>
         ///  Required designer variable.
         /// </summary>
@@ -138,13 +138,15 @@
             // 
             // textBox_realtime_log
             // 
-            textBox_realtime_log.BackColor = SystemColors.Control;
+            textBox_realtime_log.BackColor = SystemColors.ButtonHighlight;
+            textBox_realtime_log.BorderStyle = BorderStyle.FixedSingle;
             textBox_realtime_log.Location = new Point(28, 58);
             textBox_realtime_log.Multiline = true;
             textBox_realtime_log.Name = "textBox_realtime_log";
             textBox_realtime_log.ReadOnly = true;
             textBox_realtime_log.Size = new Size(749, 203);
             textBox_realtime_log.TabIndex = 0;
+            textBox_realtime_log.TabStop = false;
             textBox_realtime_log.Text = "等待连接...";
             // 
             // groupBox_storage_settings
@@ -184,7 +186,7 @@
             label_storage_path.TabIndex = 2;
             label_storage_path.Text = "存储路径";
             // 
-            // Form1
+            // MainForm
             // 
             AutoScaleDimensions = new SizeF(11F, 24F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -192,7 +194,10 @@
             Controls.Add(groupBox_storage_settings);
             Controls.Add(groupBox_realtime_log);
             Controls.Add(groupBox_connection_info);
-            Name = "Form1";
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
+            Name = "MainForm";
+            StartPosition = FormStartPosition.CenterScreen;
             Text = "STa Tool";
             groupBox_connection_info.ResumeLayout(false);
             groupBox_connection_info.PerformLayout();
