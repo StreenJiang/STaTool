@@ -164,7 +164,6 @@ namespace STaTool.tasks {
             bool isAlive = false;
             try {
                 if (socket != null) {
-                    // isAlive = !(socket.Poll(0, SelectMode.SelectRead) || socket.Available > 0);
                     isAlive = !(socket.Poll(0, SelectMode.SelectRead) && socket.Available == 0);
                 }
             } catch (SocketException e) {
