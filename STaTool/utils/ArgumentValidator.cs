@@ -38,7 +38,7 @@ namespace STaTool.utils {
         }
 
         public static bool ValidatePortInWindows(object portString) {
-            if (portString != null && portString is string) {
+            if (portString != null && (portString is string || portString is int)) {
                 return ValidatePortInWindows(portString.ToString());
             }
             return false;

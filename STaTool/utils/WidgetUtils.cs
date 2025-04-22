@@ -1,11 +1,22 @@
 namespace STaTool.utils {
-    public static class WidgetUtils {
-        private static ErrorProvider errorProvider;
-        private static ToolTip toolTip;
+    public class WidgetUtils {
+        private static readonly ErrorProvider errorProvider;
+        private static readonly ToolTip toolTip;
+        public static TextBox? TextBox_realtime_log { get; set; }
 
         static WidgetUtils() {
             errorProvider = new ErrorProvider();
             toolTip = new ToolTip();
+        }
+
+        public static void AppendMsg(string msg) {
+            if (TextBox_realtime_log != null && TextBox_realtime_log.InvokeRequired) {
+                TextBox_realtime_log.BeginInvoke(() => 
+                    TextBox_realtime_log.AppendText($"{msg.Replace("\0", "")}\r\n")
+                );
+            } else {
+                TextBox_realtime_log?.AppendText($"{msg.Replace("\0", "")}\r\n");
+            }
         }
 
         public static void SetError(Control ctrl, string message) {

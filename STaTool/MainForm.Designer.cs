@@ -80,7 +80,6 @@
             comboBox_ip.AutoCompleteMode = AutoCompleteMode.Suggest;
             comboBox_ip.AutoCompleteSource = AutoCompleteSource.ListItems;
             comboBox_ip.FormattingEnabled = true;
-            comboBox_ip.Items.AddRange(new object[] { "192.168.1.99", "192.168.1.10" });
             comboBox_ip.Location = new Point(28, 67);
             comboBox_ip.Name = "comboBox_ip";
             comboBox_ip.Size = new Size(295, 32);
@@ -91,7 +90,6 @@
             comboBox_port.AutoCompleteMode = AutoCompleteMode.Suggest;
             comboBox_port.AutoCompleteSource = AutoCompleteSource.ListItems;
             comboBox_port.FormattingEnabled = true;
-            comboBox_port.Items.AddRange(new object[] { "60000", "1888" });
             comboBox_port.Location = new Point(353, 67);
             comboBox_port.Name = "comboBox_port";
             comboBox_port.Size = new Size(146, 32);
@@ -144,10 +142,10 @@
             textBox_realtime_log.Multiline = true;
             textBox_realtime_log.Name = "textBox_realtime_log";
             textBox_realtime_log.ReadOnly = true;
+            textBox_realtime_log.ScrollBars = ScrollBars.Vertical;
             textBox_realtime_log.Size = new Size(749, 203);
             textBox_realtime_log.TabIndex = 0;
             textBox_realtime_log.TabStop = false;
-            textBox_realtime_log.Text = "等待连接...";
             // 
             // groupBox_storage_settings
             // 

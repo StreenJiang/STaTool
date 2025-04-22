@@ -32,7 +32,7 @@ namespace STaTool.db.dao {
                 $"{GetColumnName(p)} {GetSqlType(p)} {GetConstraints(p)}");
 
             // Bring 'id' to the front
-            columns = columns.OrderBy(item => item.Contains("id") && item.Contains("PRIMARY") ? 0 : 1);
+            columns = columns.OrderBy(item => item.Contains("PRIMARY KEY") ? 0 : 1);
 
             return $"CREATE TABLE IF NOT EXISTS {TableName} ({string.Join(", ", columns)});";
         }
@@ -44,7 +44,7 @@ namespace STaTool.db.dao {
         private static string GetSqlType(PropertyInfo prop) {
             var type = prop.PropertyType;
 
-            // Handle（Nullable<T>）
+            // Handle (Nullable<T>)
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>)) {
                 type = Nullable.GetUnderlyingType(type);
             }
@@ -81,7 +81,7 @@ namespace STaTool.db.dao {
         }
 
         public bool Delete(TighteningData data) {
-            return _dbConnection.Delete<TighteningData>(data);
+            return _dbConnection.Delete(data);
         }
     }
 }
