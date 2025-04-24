@@ -1,6 +1,6 @@
 using log4net;
-using STaTool.db.dao;
 using STaTool.db.models;
+using STaTool.Extensions;
 using STaTool.tasks;
 using STaTool.utils;
 
@@ -42,6 +42,34 @@ namespace STaTool {
             // Initialize log
             WidgetUtils.TextBox_realtime_log = textBox_realtime_log;
             WidgetUtils.AppendMsg("等待连接...");
+
+            // 测试
+            var tighteningDataList = new List<TighteningData> {
+                new() {
+                    tool_ip = "192.168.1.1",
+                    tool_port = 1234,
+                    cell_id = 1,
+                    channel_id = 1,
+                    torque_controller_name = "TC1",
+                    vin_number = "VIN1234567890",
+                }
+            };
+            List<string> headers = new List<string> {
+                "IP地址",
+                "端口号",
+                "cell_id",
+                "channel_id",
+                "torque_controller_name",
+                "vin_number",
+            };
+
+            if (ConfigFileUtil.IsExcelFileLocked("D:/Tightening data/data.xlsx")) {
+                WidgetUtils.AppendMsg("Excel文件被锁定，请先关闭Excel程序");
+                WidgetUtils.ShowWarningPopUp("Excel文件被锁定，请先关闭Excel程序");
+            } else {
+                tighteningDataList.ExportToExcelFile(headers, "D:/Tightening data/data.xlsx");
+                tighteningDataList.ExportToTextFileAsync(headers, "D:/Tightening data/data.txt");
+            }
         }
 
         private void ComboBox_Ip_SelectedIndexChanged(object? sender, EventArgs e) {
@@ -59,7 +87,7 @@ namespace STaTool {
 
             try {
                 object ipTemp = comboBox_ip.SelectedItem ?? comboBox_ip.Text;
-                object portTemp = comboBox_port.SelectedItem ?? comboBox_port.Text; 
+                object portTemp = comboBox_port.SelectedItem ?? comboBox_port.Text;
 
                 if (!ArgumentValidator.ValidateIPv4(ipTemp)) {
                     WidgetUtils.SetError(comboBox_ip, "请输入正确的IPv4地址");

@@ -38,5 +38,30 @@ namespace STaTool.utils {
 
             return isValid;
         }
+
+        /// <summary>
+        /// Checks if the specified Excel file is currently locked by another process.
+        /// </summary>
+        /// <param name="filePath">The full path to the Excel file.</param>
+        /// <returns>True if the file is locked; otherwise, false.</returns>
+        public static bool IsExcelFileLocked(string filePath) {
+            if (string.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath));
+            if (!File.Exists(filePath)) throw new FileNotFoundException("File not found.", filePath);
+
+            try {
+                // Attempt to open the file in exclusive mode
+                using FileStream stream = File.Open(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+                // If successful, the file is not locked
+                return false;
+            } catch (IOException) {
+                // If an IOException occurs, the file is likely locked by another process
+                return true;
+            } catch (Exception ex) {
+                // Log any unexpected exceptions
+                Console.WriteLine($"Unexpected error while checking file lock: {ex}");
+                throw;
+            }
+        }
     }
 }
