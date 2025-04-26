@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 
 namespace STaTool.utils {
-    public static class ConfigFileUtil {
+    public static class FileUtil {
         private const string CONFIG_FILE_PATH = "config.json";
 
         public static void SaveConfig(Config config) {
@@ -40,13 +40,13 @@ namespace STaTool.utils {
         }
 
         /// <summary>
-        /// Checks if the specified Excel file is currently locked by another process.
+        /// Checks if the specified file is currently locked by another process.
         /// </summary>
-        /// <param name="filePath">The full path to the Excel file.</param>
+        /// <param name="filePath">The full path to the file.</param>
         /// <returns>True if the file is locked; otherwise, false.</returns>
-        public static bool IsExcelFileLocked(string filePath) {
+        public static bool IsFileLocked(string filePath) {
             if (string.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath));
-            if (!File.Exists(filePath)) throw new FileNotFoundException("File not found.", filePath);
+            if (!File.Exists(filePath)) return false;
 
             try {
                 // Attempt to open the file in exclusive mode
@@ -61,6 +61,18 @@ namespace STaTool.utils {
                 // Log any unexpected exceptions
                 Console.WriteLine($"Unexpected error while checking file lock: {ex}");
                 throw;
+            }
+        }
+
+        public static string Year() => DateTime.Now.ToString("yyyy");
+
+        public static string Month() => DateTime.Now.ToString("MM");
+
+        public static string Day() => DateTime.Now.ToString("dd");
+
+        public static void CheckAndCreateFolder(string path) {
+            if (!Directory.Exists(path)) {
+                Directory.CreateDirectory(path);
             }
         }
     }

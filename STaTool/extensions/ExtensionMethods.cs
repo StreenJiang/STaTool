@@ -1,15 +1,26 @@
+using System.Reflection;
 using System.Text;
 using ClosedXML.Excel;
 using log4net;
+using StaTool.attribute;
+using STaTool.utils;
 
 namespace STaTool.Extensions {
     public static class ExtenstionMethods {
         private static readonly ILog log = LogManager.GetLogger(typeof(ExtenstionMethods));
 
-        // Save data to Txt file using IEnumerable
+
+        // Save data to text and text likely files using IEnumerable
+        public static async Task ExportToCsvFileAsync<T>(
+            this IEnumerable<T> data,
+            string filePath,
+            CancellationToken cancellationToken = default) {
+            await ExportToTextFileAsync(data, filePath, ",", cancellationToken);
+        }
+
+        // Save data to text and text likely files using IEnumerable
         public static async Task ExportToTextFileAsync<T>(
             this IEnumerable<T> data,
-            List<string>? headers,
             string filePath,
             string columnSeparator = "\t",
             CancellationToken cancellationToken = default) {
@@ -28,26 +39,19 @@ namespace STaTool.Extensions {
                 bool fileHasData = File.Exists(filePath) && new FileInfo(filePath).Length > 0;
 
                 // Open stream of the file for writing
-                await using FileStream fileStream = File.Exists(filePath)
-                    ? new FileStream(
-                        filePath,
-                        FileMode.Append,
-                        FileAccess.Write,
-                        FileShare.None,
-                        bufferSize: 4096,
-                        FileOptions.Asynchronous) // Enable asynchronous mode
-                    : new FileStream(
-                        filePath,
-                        FileMode.Create,
-                        FileAccess.Write,
-                        FileShare.None,
-                        bufferSize: 4096,
-                        FileOptions.Asynchronous);
+                FileMode fileMode = File.Exists(filePath) ? FileMode.Append : FileMode.Create;
+                await using FileStream fileStream = new(filePath,
+                                                        fileMode,
+                                                        FileAccess.Write,
+                                                        FileShare.None,
+                                                        bufferSize: 4096,
+                                                        FileOptions.Asynchronous); // Enable asynchronous mode
 
                 await using StreamWriter streamWriter = new(fileStream, new UTF8Encoding(false));
 
                 // Write headers only if the file is empty
-                if (!fileHasData && headers != null) {
+                if (!fileHasData) {
+                    List<string> headers = FileHelper.GetHeader(typeof(T));
                     await streamWriter.WriteLineAsync(string.Join(separator, headers)).ConfigureAwait(false);
                 }
 
@@ -57,7 +61,22 @@ namespace STaTool.Extensions {
                     if (row == null) continue;
 
                     var rowData = row.GetType().GetProperties()
-                                     .Select(property => property.GetValue(row)?.ToString() ?? "")
+                                     .Where(property => property.GetCustomAttribute<FieldName>() != null)
+                                     .OrderBy(property => property.GetCustomAttribute<FieldName>()?.Order ?? 0)
+                                     .Select(property => {
+                                         object? value = property.GetValue(row);
+                                         if (value != null) {
+                                             FieldName? fieldName = property.GetCustomAttribute<FieldName>();
+                                             if (fieldName != null && fieldName.EnumType != null) {
+                                                 string? enumName = Enum.GetName(fieldName.EnumType, value);
+                                                 if (enumName != null) {
+                                                     return enumName;
+                                                 }
+                                             }
+                                             return value;
+                                         }
+                                         return null;
+                                     })
                                      .ToList();
 
                     await streamWriter.WriteLineAsync(string.Join(separator, rowData)).ConfigureAwait(false);
@@ -77,7 +96,6 @@ namespace STaTool.Extensions {
         // Store data to Excel file using IEnumerable
         public static async Task ExportToExcelFile<T>(
             this IEnumerable<T> data,
-            List<string>? headers,
             string filePath) {
             // Generate Mutex name based on file path (to ensure validity)
             string mutexName = "Global\\" + filePath.Replace('\\', '_').Replace(':', '_');
@@ -108,15 +126,31 @@ namespace STaTool.Extensions {
                     int rowCount = worksheet.LastRowUsed()?.RowNumber() ?? 0;
 
                     // 4. Write headers only if the worksheet is empty
-                    if (rowCount == 0 && headers != null) {
+                    if (rowCount == 0) {
+                        List<string> headers = FileHelper.GetHeader(typeof(T));
                         worksheet.Cell(rowCount + 1, 1).InsertData(new List<List<string>> { headers });
                         rowCount++;
                     }
 
                     // 5. Write data to Excel
                     var dataRows = data.Select(row => row.GetType().GetProperties()
-                                                        .Select(property => property.GetValue(row)?.ToString() ?? "")
-                                                        .ToList())
+                                                         .Where(property => property.GetCustomAttribute<FieldName>() != null)
+                                                         .OrderBy(property => property.GetCustomAttribute<FieldName>()?.Order ?? 0)
+                                                         .Select(property => {
+                                                             object? value = property.GetValue(row);
+                                                             if (value != null) {
+                                                                 FieldName? fieldName = property.GetCustomAttribute<FieldName>();
+                                                                 if (fieldName != null && fieldName.EnumType != null) {
+                                                                     string? enumName = Enum.GetName(fieldName.EnumType, value);
+                                                                     if (enumName != null) {
+                                                                         return enumName;
+                                                                     }
+                                                                 }
+                                                                 return value;
+                                                             }
+                                                             return null;
+                                                         })
+                                                         .ToList())
                                        .ToList();
 
                     worksheet.Cell(rowCount + 1, 1).InsertData(dataRows);

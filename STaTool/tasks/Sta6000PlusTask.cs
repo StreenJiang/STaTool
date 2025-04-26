@@ -2,6 +2,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using log4net;
+using STaTool.constants;
+using STaTool.db.models;
+using STaTool.Extensions;
 using STaTool.utils;
 
 namespace STaTool.tasks {
@@ -74,17 +77,10 @@ namespace STaTool.tasks {
                         if (msgLen > 0) {
                             string dataMessage = Encoding.ASCII.GetString(msgBytes, 0, msgLen);
                             log.Info($"Receiving message: [{dataMessage}]");
-                            if (GetMid(dataMessage) == "0061") {
-                                log.Info($"Analyzing data: [{dataMessage}]");
-                                WidgetUtils.AppendMsg($"收到数据：[{dataMessage}]");
+                            WidgetUtils.AppendMsg($"收到数据：[{dataMessage}]");
 
-                                // TODO: analyzing data
-                                log.Debug($"Tightening status: {dataMessage.Substring(108, 1)}");
-                                log.Debug($"Torque status: {dataMessage.Substring(111, 1)}");
-                                log.Debug($"Angle status: {dataMessage.Substring(114, 1)}");
-                                log.Debug($"Torque: {dataMessage.Substring(141, 6)}");
-                                log.Debug($"Angle: {dataMessage.Substring(170, 5)}");
-                            }
+                            // Analyzing data
+                            AnalyzeData(dataMessage);
                             count = 0;
                         }
                     } catch {
@@ -111,6 +107,64 @@ namespace STaTool.tasks {
                     }
                 }
                 WidgetUtils.AppendMsg("连接已断开...");
+            });
+        }
+
+        private async void AnalyzeData(string dataMessage) {
+            await Task.Run(async () => {
+                log.Info($"Analyzing data: [{dataMessage}]");
+                if (GetMid(dataMessage) == "0061") {
+                    if (FileHelper.CurrentPath == null) {
+                        WidgetUtils.AppendMsg($"存储路径有误: [{FileHelper.CurrentPath}]");
+                        log.Error($"存储路径有误: [{FileHelper.CurrentPath}]");
+                        return;
+                    }
+
+                    try {
+                        var tighteningDataList = new List<TighteningData> {
+                            new() {
+                                tool_ip = Ip,
+                                tool_port = Port,
+
+                                cell_id = int.Parse(dataMessage.Substring(23, 4)),
+                                channel_id = int.Parse(dataMessage.Substring(29, 2)),
+                                torque_controller_name = dataMessage.Substring(33, 25),
+                                vin_number = dataMessage.Substring(60, 25),
+                                job_id = int.Parse(dataMessage.Substring(87, 2)),
+                                parameter_set_id = int.Parse(dataMessage.Substring(91, 3)),
+                                batch_size = int.Parse(dataMessage.Substring(96, 4)),
+                                batch_counter = int.Parse(dataMessage.Substring(102, 4)),
+
+                                tightening_status = int.Parse(dataMessage.Substring(108, 1)),
+                                torque_status = int.Parse(dataMessage.Substring(111, 1)),
+                                angle_status = int.Parse(dataMessage.Substring(114, 1)),
+
+                                torque_min_limit = double.Parse(dataMessage.Substring(117, 6)) / 100,
+                                torque_max_limit = double.Parse(dataMessage.Substring(125, 6)) / 100,
+                                torque_final_target = double.Parse(dataMessage.Substring(133, 6)) / 100,
+                                torque = double.Parse(dataMessage.Substring(141, 6)) / 100,
+
+                                angle_min = int.Parse(dataMessage.Substring(149, 5)),
+                                angle_max = int.Parse(dataMessage.Substring(156, 5)),
+                                angle_final_target = int.Parse(dataMessage.Substring(163, 5)),
+                                angle = int.Parse(dataMessage.Substring(170, 5)),
+
+                                timestamp = dataMessage.Substring(177, 19),
+                                date_or_time_of_last_change_in_parameter_set_settings = dataMessage.Substring(198, 19),
+
+                                batch_status = int.Parse(dataMessage.Substring(219, 1)),
+                                tightening_id = int.Parse(dataMessage.Substring(222, 10))
+                            }
+                        };
+
+                        await tighteningDataList.ExportToExcelFile(Path.Combine(FileHelper.CurrentPath, FileHelper.GetFileName(FileType.XLSX)));
+                        await tighteningDataList.ExportToTextFileAsync(Path.Combine(FileHelper.CurrentPath, FileHelper.GetFileName(FileType.TXT)));
+                        await tighteningDataList.ExportToCsvFileAsync(Path.Combine(FileHelper.CurrentPath, FileHelper.GetFileName(FileType.CSV)));
+                    } catch (Exception ex) {
+                        WidgetUtils.AppendMsg($"数据分析、导出时出错，请联系管理员");
+                        log.Error($"Error occurs while analyzing/exporting data, e = {ex}");
+                    }
+                }
             });
         }
 

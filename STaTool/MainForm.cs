@@ -1,6 +1,5 @@
 using log4net;
-using STaTool.db.models;
-using STaTool.Extensions;
+using STaTool.constants;
 using STaTool.tasks;
 using STaTool.utils;
 
@@ -18,7 +17,7 @@ namespace STaTool {
             InitializeComponent();
 
             // Load config
-            config = ConfigFileUtil.LoadConfig();
+            config = FileUtil.LoadConfig();
 
             // Initialize data
             if (config.Ip.Count > 0) {
@@ -38,38 +37,11 @@ namespace STaTool {
             button_connect.Click += ButtonConnect_Click;
             button_disconnect.Click += BUttonDisConnect_Click;
             button_clear_log.Click += ButtonClearLog_Click;
+            button_browse.Click += ButtonBrowse_Click;
 
             // Initialize log
             WidgetUtils.TextBox_realtime_log = textBox_realtime_log;
             WidgetUtils.AppendMsg("等待连接...");
-
-            // 测试
-            var tighteningDataList = new List<TighteningData> {
-                new() {
-                    tool_ip = "192.168.1.1",
-                    tool_port = 1234,
-                    cell_id = 1,
-                    channel_id = 1,
-                    torque_controller_name = "TC1",
-                    vin_number = "VIN1234567890",
-                }
-            };
-            List<string> headers = new List<string> {
-                "IP地址",
-                "端口号",
-                "cell_id",
-                "channel_id",
-                "torque_controller_name",
-                "vin_number",
-            };
-
-            if (ConfigFileUtil.IsExcelFileLocked("D:/Tightening data/data.xlsx")) {
-                WidgetUtils.AppendMsg("Excel文件被锁定，请先关闭Excel程序");
-                WidgetUtils.ShowWarningPopUp("Excel文件被锁定，请先关闭Excel程序");
-            } else {
-                tighteningDataList.ExportToExcelFile(headers, "D:/Tightening data/data.xlsx");
-                tighteningDataList.ExportToTextFileAsync(headers, "D:/Tightening data/data.txt");
-            }
         }
 
         private void ComboBox_Ip_SelectedIndexChanged(object? sender, EventArgs e) {
@@ -77,12 +49,32 @@ namespace STaTool {
         }
 
         private void ButtonConnect_Click(object? sender, EventArgs e) {
-            string filePath = textBox_storage_path.Text;
-            if (!ConfigFileUtil.IsPathValid(filePath)) {
-                WidgetUtils.SetError(textBox_storage_path, "请输入正确的存储路径");
-                return;
-            } else {
-                WidgetUtils.SetError(textBox_storage_path, "");
+            string pathPrefix = textBox_storage_path.Text;
+            try {
+                if (!FileUtil.IsPathValid(pathPrefix)) {
+                    WidgetUtils.SetError(textBox_storage_path, "请输入正确的存储路径");
+                    return;
+                } else {
+                    WidgetUtils.SetError(textBox_storage_path, "");
+                }
+
+                string folderPath = Path.Combine(pathPrefix, $"{FileUtil.Year()}", $"{FileUtil.Year()}-{FileUtil.Month()}");
+                FileUtil.CheckAndCreateFolder(folderPath);
+                FileHelper.CurrentPath = folderPath;
+
+                List<string> fileTypes = FileType.GetAll();
+                foreach (string type in fileTypes) {
+                    string fileName = $"{FileHelper.GetFileName(type)}";
+                    string filePath = Path.Combine(folderPath, fileName);
+                    if (FileUtil.IsFileLocked(filePath)) {
+                        WidgetUtils.AppendMsg($"{fileName}文件被锁定，请先关闭该文件");
+                        WidgetUtils.ShowWarningPopUp($"{fileName}文件被锁定，请先关闭该文件");
+                        return;
+                    }
+                }
+            } catch (Exception ex) {
+                WidgetUtils.AppendMsg("检查文件路径时出错，请检查文件路径是否正确。如文件路径无误，请联系管理员");
+                log.Warn($"Error occurs while checking file path, e = {ex}");
             }
 
             try {
@@ -124,8 +116,8 @@ namespace STaTool {
                 if (config.Port.Count > 5) {
                     config.Port.Dequeue();
                 }
-                config.StoragePath = filePath;
-                ConfigFileUtil.SaveConfig(config);
+                config.StoragePath = pathPrefix;
+                FileUtil.SaveConfig(config);
 
                 // Add to combo box
                 comboBox_ip.Items.Clear();
@@ -133,6 +125,7 @@ namespace STaTool {
                 comboBox_ip.Items.AddRange(config.Ip.ToArray());
                 comboBox_port.Items.AddRange(config.Port.Cast<object>().ToArray());
             } catch (Exception er) {
+                WidgetUtils.AppendMsg("连接出错，请联系管理员");
                 log.Warn($"Connect failed, e = {er}");
             }
         }
@@ -148,6 +141,35 @@ namespace STaTool {
 
         private void ButtonClearLog_Click(object? sender, EventArgs e) {
             textBox_realtime_log.Clear();
+        }
+
+        private void ButtonBrowse_Click(object? sender, EventArgs e) {
+            // Create a FolderBrowserDialog instance
+            using var folderDialog = new FolderBrowserDialog();
+            folderDialog.ShowNewFolderButton = true;
+            if (!string.IsNullOrEmpty(textBox_storage_path.Text)
+                    && !string.IsNullOrWhiteSpace(textBox_storage_path.Text)) {
+                folderDialog.SelectedPath = textBox_storage_path.Text;
+            }
+
+            // Set the dialog title (optional)
+            folderDialog.Description = "请选择一个文件夹";
+
+            // Show the dialog and check if the user clicked "OK"
+            if (folderDialog.ShowDialog() == DialogResult.OK) {
+                // Get the selected folder path
+                string selectedFolderPath = folderDialog.SelectedPath;
+
+                if (!FileUtil.IsPathValid(selectedFolderPath)) {
+                    WidgetUtils.SetError(textBox_storage_path, "请输入正确的存储路径");
+                    return;
+                } else {
+                    WidgetUtils.SetError(textBox_storage_path, "");
+                }
+
+                // Show the selected folder path in a message box or store it in a variable
+                textBox_storage_path.Text = selectedFolderPath;
+            }
         }
     }
 }
