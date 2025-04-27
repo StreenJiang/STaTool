@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Text;
 using log4net;
 using STaTool.constants;
+using STaTool.db.dao;
 using STaTool.db.models;
 using STaTool.Extensions;
 using STaTool.utils;
@@ -121,41 +122,43 @@ namespace STaTool.tasks {
                     }
 
                     try {
-                        var tighteningDataList = new List<TighteningData> {
-                            new() {
-                                tool_ip = Ip,
-                                tool_port = Port,
+                        var tighteningData = new TighteningData() {
+                            tool_ip = Ip,
+                            tool_port = Port,
 
-                                cell_id = int.Parse(dataMessage.Substring(23, 4)),
-                                channel_id = int.Parse(dataMessage.Substring(29, 2)),
-                                torque_controller_name = dataMessage.Substring(33, 25),
-                                vin_number = dataMessage.Substring(60, 25),
-                                job_id = int.Parse(dataMessage.Substring(87, 2)),
-                                parameter_set_id = int.Parse(dataMessage.Substring(91, 3)),
-                                batch_size = int.Parse(dataMessage.Substring(96, 4)),
-                                batch_counter = int.Parse(dataMessage.Substring(102, 4)),
+                            cell_id = int.Parse(dataMessage.Substring(23, 4)),
+                            channel_id = int.Parse(dataMessage.Substring(29, 2)),
+                            torque_controller_name = dataMessage.Substring(33, 25),
+                            vin_number = dataMessage.Substring(60, 25),
+                            job_id = int.Parse(dataMessage.Substring(87, 2)),
+                            parameter_set_id = int.Parse(dataMessage.Substring(91, 3)),
+                            batch_size = int.Parse(dataMessage.Substring(96, 4)),
+                            batch_counter = int.Parse(dataMessage.Substring(102, 4)),
 
-                                tightening_status = int.Parse(dataMessage.Substring(108, 1)),
-                                torque_status = int.Parse(dataMessage.Substring(111, 1)),
-                                angle_status = int.Parse(dataMessage.Substring(114, 1)),
+                            tightening_status = int.Parse(dataMessage.Substring(108, 1)),
+                            torque_status = int.Parse(dataMessage.Substring(111, 1)),
+                            angle_status = int.Parse(dataMessage.Substring(114, 1)),
 
-                                torque_min_limit = double.Parse(dataMessage.Substring(117, 6)) / 100,
-                                torque_max_limit = double.Parse(dataMessage.Substring(125, 6)) / 100,
-                                torque_final_target = double.Parse(dataMessage.Substring(133, 6)) / 100,
-                                torque = double.Parse(dataMessage.Substring(141, 6)) / 100,
+                            torque_min_limit = double.Parse(dataMessage.Substring(117, 6)) / 100,
+                            torque_max_limit = double.Parse(dataMessage.Substring(125, 6)) / 100,
+                            torque_final_target = double.Parse(dataMessage.Substring(133, 6)) / 100,
+                            torque = double.Parse(dataMessage.Substring(141, 6)) / 100,
 
-                                angle_min = int.Parse(dataMessage.Substring(149, 5)),
-                                angle_max = int.Parse(dataMessage.Substring(156, 5)),
-                                angle_final_target = int.Parse(dataMessage.Substring(163, 5)),
-                                angle = int.Parse(dataMessage.Substring(170, 5)),
+                            angle_min = int.Parse(dataMessage.Substring(149, 5)),
+                            angle_max = int.Parse(dataMessage.Substring(156, 5)),
+                            angle_final_target = int.Parse(dataMessage.Substring(163, 5)),
+                            angle = int.Parse(dataMessage.Substring(170, 5)),
 
-                                timestamp = dataMessage.Substring(177, 19),
-                                date_or_time_of_last_change_in_parameter_set_settings = dataMessage.Substring(198, 19),
+                            timestamp = dataMessage.Substring(177, 19),
+                            date_or_time_of_last_change_in_parameter_set_settings = dataMessage.Substring(198, 19),
 
-                                batch_status = int.Parse(dataMessage.Substring(219, 1)),
-                                tightening_id = int.Parse(dataMessage.Substring(222, 10))
-                            }
+                            batch_status = int.Parse(dataMessage.Substring(219, 1)),
+                            tightening_id = int.Parse(dataMessage.Substring(222, 10))
                         };
+                        TighteningDataDao dao = new();
+                        dao.Insert(tighteningData);
+
+                        var tighteningDataList = new List<TighteningData> { tighteningData };
 
                         await tighteningDataList.ExportToExcelFile(Path.Combine(FileHelper.CurrentPath, FileHelper.GetFileName(FileType.XLSX)));
                         await tighteningDataList.ExportToTextFileAsync(Path.Combine(FileHelper.CurrentPath, FileHelper.GetFileName(FileType.TXT)));
