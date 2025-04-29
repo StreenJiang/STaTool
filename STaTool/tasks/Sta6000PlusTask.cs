@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Accessibility;
 using log4net;
 using STaTool.constants;
 using STaTool.db.dao;
@@ -41,9 +42,6 @@ namespace STaTool.tasks {
             Ip = ip;
             Port = port;
 
-            // Add command: last_data_subscribe
-            commands.Enqueue(LAST_DATA_SUBSCRIBE);
-
             // Set connected to true
             isConnected = true;
 
@@ -78,10 +76,9 @@ namespace STaTool.tasks {
                         if (msgLen > 0) {
                             string dataMessage = Encoding.ASCII.GetString(msgBytes, 0, msgLen);
                             log.Info($"Receiving message: [{dataMessage}]");
-                            WidgetUtils.AppendMsg($"收到数据：[{dataMessage}]");
 
-                            // Analyzing data
-                            AnalyzeData(dataMessage);
+                            // Analyzing data asynchronously but don't wait for it
+                            _ = AnalyzeData(dataMessage);
                             count = 0;
                         }
                     } catch {
@@ -101,7 +98,6 @@ namespace STaTool.tasks {
                     try {
                         // Send communication stop
                         socket.Send(Encoding.ASCII.GetBytes(COMMUNICATION_STOP));
-                    } catch (Exception) {
                     } finally {
                         socket.Close();
                         socket = null;
@@ -111,15 +107,30 @@ namespace STaTool.tasks {
             });
         }
 
-        private async void AnalyzeData(string dataMessage) {
-            await Task.Run(async () => {
+        private async Task AnalyzeData(string dataMessage) {
+            await Task.Run(() => {
                 log.Info($"Analyzing data: [{dataMessage}]");
-                if (GetMid(dataMessage) == "0061") {
+
+                if (GetMid(dataMessage) == "0005") {
+                    return;
+                } else if (GetMid(dataMessage) == "9999") {
+                    WidgetUtils.AppendMsg($"持续等待接收数据中...");
+                    return;
+                } else if (GetMid(dataMessage) == "0061") {
                     if (FileHelper.CurrentPath == null) {
                         WidgetUtils.AppendMsg($"存储路径有误: [{FileHelper.CurrentPath}]");
                         log.Error($"存储路径有误: [{FileHelper.CurrentPath}]");
                         return;
                     }
+
+                    var _tightening_status = int.Parse(dataMessage.Substring(108, 1));
+                    var _torque_status = int.Parse(dataMessage.Substring(111, 1));
+                    var _angle_status = int.Parse(dataMessage.Substring(114, 1));
+                    var _torque = double.Parse(dataMessage.Substring(141, 6)) / 100;
+                    var _angle = int.Parse(dataMessage.Substring(170, 5));
+                    WidgetUtils.AppendMsg(
+                        $"收到数据：[扭矩={_torque}，角度={_angle}，扭矩结果={_torque_status}，角度结果={_angle_status}，拧紧结果={_tightening_status}]"
+                    );
 
                     try {
                         var tighteningData = new TighteningData() {
@@ -135,19 +146,19 @@ namespace STaTool.tasks {
                             batch_size = int.Parse(dataMessage.Substring(96, 4)),
                             batch_counter = int.Parse(dataMessage.Substring(102, 4)),
 
-                            tightening_status = int.Parse(dataMessage.Substring(108, 1)),
-                            torque_status = int.Parse(dataMessage.Substring(111, 1)),
-                            angle_status = int.Parse(dataMessage.Substring(114, 1)),
+                            tightening_status = _tightening_status,
+                            torque_status = _torque_status,
+                            angle_status = _angle_status,
 
                             torque_min_limit = double.Parse(dataMessage.Substring(117, 6)) / 100,
                             torque_max_limit = double.Parse(dataMessage.Substring(125, 6)) / 100,
                             torque_final_target = double.Parse(dataMessage.Substring(133, 6)) / 100,
-                            torque = double.Parse(dataMessage.Substring(141, 6)) / 100,
+                            torque = _torque,
 
                             angle_min = int.Parse(dataMessage.Substring(149, 5)),
                             angle_max = int.Parse(dataMessage.Substring(156, 5)),
                             angle_final_target = int.Parse(dataMessage.Substring(163, 5)),
-                            angle = int.Parse(dataMessage.Substring(170, 5)),
+                            angle = _angle,
 
                             timestamp = dataMessage.Substring(177, 19),
                             date_or_time_of_last_change_in_parameter_set_settings = dataMessage.Substring(198, 19),
@@ -156,18 +167,20 @@ namespace STaTool.tasks {
                             tightening_id = int.Parse(dataMessage.Substring(222, 10))
                         };
                         TighteningDataDao dao = new();
-                        dao.Insert(tighteningData);
+                        _ = dao.InsertAsync(tighteningData);
 
                         var tighteningDataList = new List<TighteningData> { tighteningData };
 
-                        await tighteningDataList.ExportToExcelFile(Path.Combine(FileHelper.CurrentPath, FileHelper.GetFileName(FileType.XLSX)));
-                        await tighteningDataList.ExportToTextFileAsync(Path.Combine(FileHelper.CurrentPath, FileHelper.GetFileName(FileType.TXT)));
-                        await tighteningDataList.ExportToCsvFileAsync(Path.Combine(FileHelper.CurrentPath, FileHelper.GetFileName(FileType.CSV)));
+                        _ = tighteningDataList.ExportToExcelFile(Path.Combine(FileHelper.CurrentPath, FileHelper.GetFileName(FileType.XLSX)));
+                        _ = tighteningDataList.ExportToTextFileAsync(Path.Combine(FileHelper.CurrentPath, FileHelper.GetFileName(FileType.TXT)));
+                        _ = tighteningDataList.ExportToCsvFileAsync(Path.Combine(FileHelper.CurrentPath, FileHelper.GetFileName(FileType.CSV)));
                     } catch (Exception ex) {
                         WidgetUtils.AppendMsg($"数据分析、导出时出错，请联系管理员");
                         log.Error($"Error occurs while analyzing/exporting data, e = {ex}");
                     }
                 }
+
+                log.Info($"Analysis complete");
             });
         }
 
@@ -194,6 +207,9 @@ namespace STaTool.tasks {
                     if (msgLen == 1 || (msgLen > 8 && GetMid(dataMessage) == "0005")) {
                         log.Info($"Trying to connect...");
                         WidgetUtils.AppendMsg("已连接仪器，持续接收数据中...");
+
+                        // Add command: last_data_subscribe
+                        commands.Enqueue(LAST_DATA_SUBSCRIBE);
                     } else {
                         socket.Close();
                         socket = null;

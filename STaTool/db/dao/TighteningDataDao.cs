@@ -76,12 +76,24 @@ namespace STaTool.db.dao {
             return (int) _dbConnection.Insert(data);
         }
 
+        public async Task<int> InsertAsync(TighteningData data) {
+            return await _dbConnection.InsertAsync(data);
+        }
+
         public bool Update(TighteningData data) {
             return _dbConnection.Update<TighteningData>(data);
         }
 
+        public async Task<bool> UpdateAsync(TighteningData data) {
+            return await _dbConnection.UpdateAsync(data);
+        }
+
         public bool Delete(TighteningData data) {
             return _dbConnection.Delete(data);
+        }
+
+        public async Task<bool> DeleteAsync(TighteningData data) {
+            return await _dbConnection.DeleteAsync(data);
         }
     }
 }
