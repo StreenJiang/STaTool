@@ -34,11 +34,11 @@ namespace STaTool.db.models {
         public double? torque_final_target { get; set; }                                     // 最终扭力目标值
         [FieldName("扭矩值", 12)]
         public double? torque { get; set; }                                                  // 最终扭力
-        [FieldName("角度值", 13)]
+        [FieldName("角度下限", 13)]
         public int? angle_min { get; set; }                                                 // 最终角度下限
-        [FieldName("角度值", 14)]
+        [FieldName("角度上限", 14)]
         public int? angle_max { get; set; }                                                 // 最终角度上限
-        [FieldName("角度值", 15)]
+        [FieldName("角度目标值", 15)]
         public int? angle_final_target { get; set; }                                        // 最终角度目标值
         [FieldName("角度值", 16)]
         public int? angle { get; set; }                                                     // 最终角度

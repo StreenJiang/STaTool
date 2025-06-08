@@ -1,13 +1,12 @@
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
-using Accessibility;
 using log4net;
 using STaTool.constants;
 using STaTool.db.dao;
 using STaTool.db.models;
 using STaTool.Extensions;
 using STaTool.utils;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 
 namespace STaTool.tasks {
 
@@ -137,11 +136,14 @@ namespace STaTool.tasks {
                             tool_ip = Ip,
                             tool_port = Port,
 
-                            cell_id = int.Parse(dataMessage.Substring(23, 4)),
-                            channel_id = int.Parse(dataMessage.Substring(29, 2)),
-                            torque_controller_name = dataMessage.Substring(33, 25),
-                            vin_number = dataMessage.Substring(60, 25),
-                            job_id = int.Parse(dataMessage.Substring(87, 2)),
+                            cell_id = int.Parse(dataMessage.Substring(22, 4)),
+                            channel_id = int.Parse(dataMessage.Substring(28, 2)),
+                            torque_controller_name = dataMessage.Substring(32, 25).Trim(),
+                            vin_number = dataMessage.Substring(59, 25).Trim(),
+                            job_id = int.Parse(dataMessage.Substring(86, 2)),
+
+                            // There is one more '1' after [89~90 = 06],
+                            // so all indexes will start with one more
                             parameter_set_id = int.Parse(dataMessage.Substring(91, 3)),
                             batch_size = int.Parse(dataMessage.Substring(96, 4)),
                             batch_counter = int.Parse(dataMessage.Substring(102, 4)),
@@ -160,8 +162,8 @@ namespace STaTool.tasks {
                             angle_final_target = int.Parse(dataMessage.Substring(163, 5)),
                             angle = _angle,
 
-                            timestamp = dataMessage.Substring(177, 19),
-                            date_or_time_of_last_change_in_parameter_set_settings = dataMessage.Substring(198, 19),
+                            timestamp = dataMessage.Substring(177, 19).Trim(),
+                            date_or_time_of_last_change_in_parameter_set_settings = dataMessage.Substring(198, 19).Trim(),
 
                             batch_status = int.Parse(dataMessage.Substring(219, 1)),
                             tightening_id = int.Parse(dataMessage.Substring(222, 10))
