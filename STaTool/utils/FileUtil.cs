@@ -1,12 +1,46 @@
+using log4net;
 using Newtonsoft.Json;
+using System.Drawing.Imaging;
 
 namespace STaTool.utils {
     public static class FileUtil {
+        private static ILog log = LogManager.GetLogger(typeof(FileUtil));
         private const string CONFIG_FILE_PATH = "config.json";
+        private const string IMAGE_DIRECTORY = "Button Images";
 
         public static void SaveConfig(Config config) {
             string configJson = JsonConvert.SerializeObject(config);
             File.WriteAllText(CONFIG_FILE_PATH, configJson);
+        }
+
+        public static bool ImageExists(string imageName) {
+            if (Directory.Exists(IMAGE_DIRECTORY)) {
+                string filePath = Path.Combine(IMAGE_DIRECTORY, $"{imageName}.png");
+                return File.Exists(filePath);
+            }
+
+            return false;
+        }
+
+        public static void SaveImage(Image image, string imageName) {
+            if (!Directory.Exists(IMAGE_DIRECTORY)) {
+                Directory.CreateDirectory(IMAGE_DIRECTORY);
+            }
+
+            string filePath = Path.Combine(IMAGE_DIRECTORY, $"{imageName}.png");
+            image.Save(filePath, ImageFormat.Png);
+        }
+
+        public static void DeleteImage(string imageName) {
+            string filePath = Path.Combine(IMAGE_DIRECTORY, $"{imageName}.png");
+
+            if (File.Exists(filePath)) {
+                File.Delete(filePath);
+            }
+        }
+
+        public static string GetImagePath(string imageName) {
+            return Path.Combine(IMAGE_DIRECTORY, $"{imageName}.png");
         }
 
         public static Config LoadConfig() {
@@ -45,8 +79,10 @@ namespace STaTool.utils {
         /// <param name="filePath">The full path to the file.</param>
         /// <returns>True if the file is locked; otherwise, false.</returns>
         public static bool IsFileLocked(string filePath) {
-            if (string.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath));
-            if (!File.Exists(filePath)) return false;
+            if (string.IsNullOrEmpty(filePath))
+                throw new ArgumentNullException(nameof(filePath));
+            if (!File.Exists(filePath))
+                return false;
 
             try {
                 // Attempt to open the file in exclusive mode
@@ -59,7 +95,7 @@ namespace STaTool.utils {
                 return true;
             } catch (Exception ex) {
                 // Log any unexpected exceptions
-                Console.WriteLine($"Unexpected error while checking file lock: {ex}");
+                log.Error("Unexpected error while checking file lock: ", ex);
                 throw;
             }
         }
