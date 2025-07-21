@@ -183,15 +183,15 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:StaToolSetup"
-        "ProductCode" = "8:{735E0F4D-9FF0-4E64-9549-9AA909A6F539}"
-        "PackageCode" = "8:{5C46396F-5BF2-4837-B801-FBD3C931C27A}"
+        "ProductCode" = "8:{4FA12E7A-7B65-4F37-9E30-63EDDEA853B1}"
+        "PackageCode" = "8:{4DBBE6CB-DBFF-4C5B-B329-2B2C5F24AB98}"
         "UpgradeCode" = "8:{4BD9A26F-AE9A-4419-8A09-50CABFBF0514}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:TRUE"
         "DetectNewerInstalledVersion" = "11:TRUE"
         "InstallAllUsers" = "11:TRUE"
-        "ProductVersion" = "8:1.0.0"
+        "ProductVersion" = "8:1.0.1"
         "Manufacturer" = "8:streen.jiang@outlook.com"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:"
@@ -719,7 +719,7 @@
         {
             "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_41FF779E67D5402EB15FBC828BFEB5F7"
             {
-            "SourcePath" = "8:..\\STaTool\\obj\\Debug\\net6.0-windows\\win-x64\\apphost.exe"
+            "SourcePath" = "8:..\\STaTool\\obj\\Release\\net6.0-windows\\win-x64\\apphost.exe"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_83FFBEF9C9D44DF19E2ED754A3143035"
