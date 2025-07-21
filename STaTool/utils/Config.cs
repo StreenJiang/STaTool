@@ -10,8 +10,13 @@ namespace STaTool.utils {
         public Queue<string> YesBtnImg { get; set; } = new Queue<string>();
         public Queue<string> OkBtnImg { get; set; } = new Queue<string>();
         public Queue<string> CloseBtnImg { get; set; } = new Queue<string>();
-        public int FetchInterval { get; set; } = 0;
+        public Queue<string> PlcIp { get; set; } = new Queue<string>();
+        public Queue<int> PlcPort { get; set; } = new Queue<int>();
+        public int PlcFlagPos { get; set; } = 0;
+        public int PlcHeartBeatPos { get; set; } = 0;
+        public int RepeatTimes { get; set; } = 0;
         public int ClickInterval { get; set; } = 0;
+        public int CheckInterval { get; set; } = 0;
         public string StoragePath { get; set; } = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tightening data");
     }
 }

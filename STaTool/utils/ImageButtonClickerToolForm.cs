@@ -1,4 +1,5 @@
 ﻿using log4net;
+using STaTool.plc;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -17,7 +18,11 @@ namespace STaTool.utils {
         private List<string> _imageButtons;
         private Action _resetControls;
 
-        public ImageButtonClickerToolForm(List<string> imageButtons, Action resetControls) {
+        private string _plcIp;
+        private int _plcPort;
+        private volatile bool _plcFlagDetected = false;
+
+        public ImageButtonClickerToolForm(List<string> imageButtons, string plcIp, int plcPort, Action resetControls) {
             log = LogManager.GetLogger(GetType());
 
             _proc = HookCallback;
@@ -31,14 +36,16 @@ namespace STaTool.utils {
                 workingArea.Bottom - Height
             );
             Config config = FileUtil.LoadConfig();
-            if (config.FetchInterval != 0) {
-                textBox_fetch_interval.Text = config.FetchInterval.ToString();
+            if (config.RepeatTimes != 0) {
+                textBox_repeat_times.Text = config.RepeatTimes.ToString();
             }
             if (config.ClickInterval != 0) {
                 textBox_click_interval.Text = config.ClickInterval.ToString();
             }
 
             _imageButtons = imageButtons;
+            _plcIp = plcIp;
+            _plcPort = plcPort;
             _resetControls = resetControls;
 
             button_start_fetch.Click += ButtonStartFetch_Click;
@@ -70,21 +77,35 @@ namespace STaTool.utils {
         }
 
         private void ButtonStartFetch_Click(object? sender, EventArgs e) {
-            string fetchIntervalStr = textBox_fetch_interval.Text;
+            string repeatTimesStr = textBox_repeat_times.Text;
             string clickIntervalStr = textBox_click_interval.Text;
-            if (string.IsNullOrWhiteSpace(fetchIntervalStr)
-                || string.IsNullOrWhiteSpace(clickIntervalStr)) {
-                WidgetUtils.ShowWarningPopUp("间隔时间不能为空！");
+            string checkIntervalStr = textBox_check_interval.Text;
+            //string checkIntervalStr = text
+            if (string.IsNullOrWhiteSpace(repeatTimesStr) || string.IsNullOrWhiteSpace(clickIntervalStr)
+                || string.IsNullOrWhiteSpace(checkIntervalStr)) {
+                WidgetUtils.ShowWarningPopUp("请填入所有必须信息！");
                 return;
             }
 
-            int fetchInterval = int.Parse(fetchIntervalStr);
+            // Create modbus client
+            var fx5UModbusClient = new Fx5uModbusClient();
+            try {
+                fx5UModbusClient.Connect(_plcIp, _plcPort);
+            } catch (Exception ex) {
+                WidgetUtils.ShowWarningPopUp($"无法使用【ip={_plcIp}，port={_plcPort}】连接到PLC！");
+                log.Warn($"无法使用【ip={_plcIp}，port={_plcPort}】连接到PLC！", ex);
+                return;
+            }
+
+            int repeatTimes = int.Parse(repeatTimesStr);
             int clickInterval = int.Parse(clickIntervalStr);
+            int checkInterval = int.Parse(checkIntervalStr);
 
             // Update config
             Config config = FileUtil.LoadConfig();
-            config.FetchInterval = fetchInterval;
+            config.RepeatTimes = repeatTimes;
             config.ClickInterval = clickInterval;
+            config.CheckInterval = checkInterval;
             FileUtil.SaveConfig(config);
 
             button_start_fetch.Enabled = false;
@@ -98,26 +119,43 @@ namespace STaTool.utils {
                 WidgetUtils.AppendMsg("开始自动抓取曲线数据...");
                 log.Info("Start fetching curve data...");
 
+                var plcService = new PlcPollingService(fx5UModbusClient);
                 var clicker = new ImageRecognitionClicker();
                 if (clicker.InitOk) {
                     try {
+                        _ = plcService.StartPollingAsync(checkInterval, config.PlcFlagPos, config.PlcHeartBeatPos, flag => {
+                            _plcFlagDetected = flag;
+                        }, token);
+
                         while (!token.IsCancellationRequested) {
-                            for (int i = 0; i < _imageButtons.Count; i++) {
-                                string btnImg = FileUtil.GetImagePath(_imageButtons[i]);
-                                if (i == 1) {
-                                    clicker.ClickButtonByImage_Special(btnImg);
-                                } else {
-                                    clicker.ClickButtonByImage(btnImg);
+                            if (_plcFlagDetected) {
+                                int count = 0;
+
+                                while (count < repeatTimes) {
+                                    token.ThrowIfCancellationRequested();
+
+                                    for (int i = 0; i < _imageButtons.Count; i++) {
+                                        string btnImg = FileUtil.GetImagePath(_imageButtons[i]);
+                                        if (i == 1) {
+                                            clicker.ClickButtonByImage_Special(btnImg);
+                                        } else {
+                                            clicker.ClickButtonByImage(btnImg);
+                                        }
+
+                                        await Task.Delay(repeatTimes, token);
+                                    }
+
+                                    count++;
                                 }
 
-                                if (i != _imageButtons.Count - 1) {
-                                    await Task.Delay(clickInterval, token);
-                                } else {
-                                    await Task.Delay(fetchInterval, token);
-                                }
+                                fx5UModbusClient.WriteCoil(config.PlcFlagPos, false);
                             }
+
+                            await Task.Delay(clickInterval, token);
                         }
                     } catch (TaskCanceledException) {
+                    } finally {
+                        fx5UModbusClient.WriteCoil(config.PlcFlagPos, false);
                     }
                 }
             });

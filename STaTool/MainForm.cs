@@ -66,6 +66,22 @@ namespace STaTool {
                     FileUtil.SaveConfig(config);
                 }
             }
+
+            if (config.PlcIp.Count > 0) {
+                comboBox_plc_ip.Items.AddRange(config.PlcIp.ToArray());
+                comboBox_plc_ip.SelectedIndex = 0;
+            }
+            if (config.PlcPort.Count > 0) {
+                comboBox_plc_port.Items.AddRange(config.PlcPort.Cast<object>().ToArray());
+                comboBox_plc_port.SelectedIndex = 0;
+            }
+            if (config.PlcFlagPos != 0) {
+                textBox_plc_flag_pos.Text = config.PlcFlagPos.ToString();
+            }
+            if (config.PlcHeartBeatPos != 0) {
+                textBox_plc_heartbeat_pos.Text = config.PlcHeartBeatPos.ToString();
+            }
+
             if (!string.IsNullOrEmpty(config.StoragePath)) {
                 textBox_storage_path.Text = config.StoragePath;
             }
@@ -255,6 +271,51 @@ namespace STaTool {
                 return;
             }
 
+            object plcIpTemp = comboBox_plc_ip.SelectedItem ?? comboBox_plc_ip.Text;
+            object plcPortTemp = comboBox_plc_port.SelectedItem ?? comboBox_plc_port.Text;
+            string flagPosStr = textBox_plc_flag_pos.Text;
+            string heartbeatPosStr = textBox_plc_heartbeat_pos.Text;
+
+            if (!ArgumentValidator.ValidateIPv4(plcIpTemp)) {
+                WidgetUtils.SetError(comboBox_plc_ip, "请输入正确的IPv4地址");
+                return;
+            } else {
+                WidgetUtils.SetError(comboBox_plc_ip, "");
+            }
+
+            if (!ArgumentValidator.ValidatePortInWindows(plcPortTemp)) {
+                WidgetUtils.SetError(comboBox_plc_port, "请输入正确的端口号");
+                return;
+            } else {
+                WidgetUtils.SetError(comboBox_plc_port, "");
+            }
+
+            if (string.IsNullOrWhiteSpace(flagPosStr) || string.IsNullOrWhiteSpace(heartbeatPosStr)) {
+                WidgetUtils.ShowWarningPopUp("标识位和心跳位均不能为空！");
+                return;
+            }
+
+            var ip = plcIpTemp.ToString();
+            var port = int.Parse(plcPortTemp.ToString());
+            var flagPos = int.Parse(flagPosStr);
+            var heartbeatPos = int.Parse(heartbeatPosStr);
+
+            // Save config
+            if (!config.PlcIp.Contains(ip) && !config.PlcPort.Contains(port)) {
+                config.PlcIp.Enqueue(ip);
+                config.PlcPort.Enqueue(port);
+            }
+            // Remove the oldest one if the queue is greater than 5
+            if (config.PlcIp.Count > 5) {
+                config.PlcIp.Dequeue();
+            }
+            if (config.PlcPort.Count > 5) {
+                config.PlcPort.Dequeue();
+            }
+            config.PlcFlagPos = flagPos;
+            config.PlcHeartBeatPos = heartbeatPos;
+            FileUtil.SaveConfig(config);
+
             button_capture_update_btn_img.Enabled = false;
             button_crv_header_img.Enabled = false;
             button_export_btn_img.Enabled = false;
@@ -271,6 +332,8 @@ namespace STaTool {
             comboBox_yes_btn_img.Enabled = false;
             comboBox_ok_btn_img.Enabled = false;
             comboBox_close_btn_img.Enabled = false;
+            comboBox_plc_ip.Enabled = false;
+            comboBox_plc_port.Enabled = false;
             button_start_fetch.Enabled = false;
 
             fetchingCurveData = true;
@@ -285,7 +348,7 @@ namespace STaTool {
                 okBtnImgName,
                 closeBtnImgName,
             };
-            var imageButtonClickerToolForm = new ImageButtonClickerToolForm(buttons, () => {
+            var imageButtonClickerToolForm = new ImageButtonClickerToolForm(buttons, ip, port, () => {
                 fetchingCurveData = false;
 
                 button_capture_update_btn_img.Enabled = true;
@@ -304,6 +367,8 @@ namespace STaTool {
                 comboBox_yes_btn_img.Enabled = true;
                 comboBox_ok_btn_img.Enabled = true;
                 comboBox_close_btn_img.Enabled = true;
+                comboBox_plc_ip.Enabled = true;
+                comboBox_plc_port.Enabled = true;
                 button_start_fetch.Enabled = true;
             });
             imageButtonClickerToolForm.Show();
