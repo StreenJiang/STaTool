@@ -38,11 +38,29 @@
             textBox_storage_path = new TextBox();
             label_storage_path = new Label();
             groupBox_curve_settings = new GroupBox();
+            label_close_btn_img = new Label();
+            label_yes_btn_img = new Label();
+            groupBox_plc_settings = new GroupBox();
+            textBox_plc_flag_pos = new TextBox();
+            textBox_plc_heartbeat_pos = new TextBox();
+            label_plc_flag_pos = new Label();
+            label_plc_ip = new Label();
+            label_plc_heartbeat_pos = new Label();
+            label_plc_port = new Label();
+            comboBox_plc_ip = new ComboBox();
+            comboBox_plc_port = new ComboBox();
+            label_ok_btn_img = new Label();
             label_save_btn_img = new Label();
             label_blm_btn_img = new Label();
             label_export_btn_img = new Label();
             label_crv_header_img = new Label();
+            comboBox_close_btn_img = new ComboBox();
+            comboBox_ok_btn_img = new ComboBox();
+            comboBox_yes_btn_img = new ComboBox();
+            button_close_btn_img = new Button();
             comboBox_save_btn_img = new ComboBox();
+            button_yes_btn_img = new Button();
+            button_ok_btn_img = new Button();
             comboBox_blm_btn_img = new ComboBox();
             button_save_btn_img = new Button();
             label_update_btn_img = new Label();
@@ -54,19 +72,11 @@
             comboBox_update_btn_img = new ComboBox();
             button_capture_update_btn_img = new Button();
             button_start_fetch = new Button();
-            button_yes_btn_img = new Button();
-            comboBox_yes_btn_img = new ComboBox();
-            label_yes_btn_img = new Label();
-            button_ok_btn_img = new Button();
-            button_close_btn_img = new Button();
-            comboBox_ok_btn_img = new ComboBox();
-            comboBox_close_btn_img = new ComboBox();
-            label_ok_btn_img = new Label();
-            label_close_btn_img = new Label();
             groupBox_connection_info.SuspendLayout();
             groupBox_realtime_log.SuspendLayout();
             groupBox_storage_settings.SuspendLayout();
             groupBox_curve_settings.SuspendLayout();
+            groupBox_plc_settings.SuspendLayout();
             SuspendLayout();
             // 
             // groupBox_connection_info
@@ -110,7 +120,7 @@
             comboBox_ip.Location = new Point(28, 67);
             comboBox_ip.Name = "comboBox_ip";
             comboBox_ip.Size = new Size(295, 32);
-            comboBox_ip.TabIndex = 1;
+            comboBox_ip.TabIndex = 0;
             // 
             // comboBox_port
             // 
@@ -127,7 +137,7 @@
             button_connect.Location = new Point(537, 65);
             button_connect.Name = "button_connect";
             button_connect.Size = new Size(112, 34);
-            button_connect.TabIndex = 3;
+            button_connect.TabIndex = 2;
             button_connect.Text = "连接";
             button_connect.UseVisualStyleBackColor = true;
             // 
@@ -145,7 +155,7 @@
             // 
             groupBox_realtime_log.Controls.Add(button_clear_log);
             groupBox_realtime_log.Controls.Add(textBox_realtime_log);
-            groupBox_realtime_log.Location = new Point(12, 679);
+            groupBox_realtime_log.Location = new Point(12, 868);
             groupBox_realtime_log.Name = "groupBox_realtime_log";
             groupBox_realtime_log.Size = new Size(805, 286);
             groupBox_realtime_log.TabIndex = 1;
@@ -179,7 +189,7 @@
             groupBox_storage_settings.Controls.Add(button_browse);
             groupBox_storage_settings.Controls.Add(textBox_storage_path);
             groupBox_storage_settings.Controls.Add(label_storage_path);
-            groupBox_storage_settings.Location = new Point(12, 541);
+            groupBox_storage_settings.Location = new Point(12, 730);
             groupBox_storage_settings.Name = "groupBox_storage_settings";
             groupBox_storage_settings.Size = new Size(805, 132);
             groupBox_storage_settings.TabIndex = 2;
@@ -215,6 +225,7 @@
             // 
             groupBox_curve_settings.Controls.Add(label_close_btn_img);
             groupBox_curve_settings.Controls.Add(label_yes_btn_img);
+            groupBox_curve_settings.Controls.Add(groupBox_plc_settings);
             groupBox_curve_settings.Controls.Add(label_ok_btn_img);
             groupBox_curve_settings.Controls.Add(label_save_btn_img);
             groupBox_curve_settings.Controls.Add(label_blm_btn_img);
@@ -240,10 +251,124 @@
             groupBox_curve_settings.Controls.Add(button_start_fetch);
             groupBox_curve_settings.Location = new Point(12, 154);
             groupBox_curve_settings.Name = "groupBox_curve_settings";
-            groupBox_curve_settings.Size = new Size(805, 381);
+            groupBox_curve_settings.Size = new Size(805, 570);
             groupBox_curve_settings.TabIndex = 3;
             groupBox_curve_settings.TabStop = false;
             groupBox_curve_settings.Text = "曲线抓取配置";
+            // 
+            // label_close_btn_img
+            // 
+            label_close_btn_img.AutoSize = true;
+            label_close_btn_img.Location = new Point(433, 255);
+            label_close_btn_img.Name = "label_close_btn_img";
+            label_close_btn_img.Size = new Size(154, 24);
+            label_close_btn_img.TabIndex = 2;
+            label_close_btn_img.Text = "【关闭】按钮图片";
+            // 
+            // label_yes_btn_img
+            // 
+            label_yes_btn_img.AutoSize = true;
+            label_yes_btn_img.Location = new Point(433, 190);
+            label_yes_btn_img.Name = "label_yes_btn_img";
+            label_yes_btn_img.Size = new Size(190, 24);
+            label_yes_btn_img.TabIndex = 2;
+            label_yes_btn_img.Text = "【是否替换】按钮图片";
+            // 
+            // groupBox_plc_settings
+            // 
+            groupBox_plc_settings.Controls.Add(textBox_plc_flag_pos);
+            groupBox_plc_settings.Controls.Add(textBox_plc_heartbeat_pos);
+            groupBox_plc_settings.Controls.Add(label_plc_flag_pos);
+            groupBox_plc_settings.Controls.Add(label_plc_ip);
+            groupBox_plc_settings.Controls.Add(label_plc_heartbeat_pos);
+            groupBox_plc_settings.Controls.Add(label_plc_port);
+            groupBox_plc_settings.Controls.Add(comboBox_plc_ip);
+            groupBox_plc_settings.Controls.Add(comboBox_plc_port);
+            groupBox_plc_settings.Location = new Point(28, 350);
+            groupBox_plc_settings.Name = "groupBox_plc_settings";
+            groupBox_plc_settings.Size = new Size(749, 136);
+            groupBox_plc_settings.TabIndex = 0;
+            groupBox_plc_settings.TabStop = false;
+            groupBox_plc_settings.Text = "PLC配置";
+            // 
+            // textBox_plc_flag_pos
+            // 
+            textBox_plc_flag_pos.Location = new Point(647, 65);
+            textBox_plc_flag_pos.Name = "textBox_plc_flag_pos";
+            textBox_plc_flag_pos.Size = new Size(64, 30);
+            textBox_plc_flag_pos.TabIndex = 3;
+            // 
+            // textBox_plc_heartbeat_pos
+            // 
+            textBox_plc_heartbeat_pos.Location = new Point(551, 65);
+            textBox_plc_heartbeat_pos.Name = "textBox_plc_heartbeat_pos";
+            textBox_plc_heartbeat_pos.Size = new Size(64, 30);
+            textBox_plc_heartbeat_pos.TabIndex = 2;
+            // 
+            // label_plc_flag_pos
+            // 
+            label_plc_flag_pos.AutoSize = true;
+            label_plc_flag_pos.Location = new Point(647, 38);
+            label_plc_flag_pos.Name = "label_plc_flag_pos";
+            label_plc_flag_pos.Size = new Size(64, 24);
+            label_plc_flag_pos.TabIndex = 2;
+            label_plc_flag_pos.Text = "标识位";
+            // 
+            // label_plc_ip
+            // 
+            label_plc_ip.AutoSize = true;
+            label_plc_ip.Location = new Point(33, 40);
+            label_plc_ip.Name = "label_plc_ip";
+            label_plc_ip.Size = new Size(62, 24);
+            label_plc_ip.TabIndex = 2;
+            label_plc_ip.Text = "IP地址";
+            // 
+            // label_plc_heartbeat_pos
+            // 
+            label_plc_heartbeat_pos.AutoSize = true;
+            label_plc_heartbeat_pos.Location = new Point(551, 38);
+            label_plc_heartbeat_pos.Name = "label_plc_heartbeat_pos";
+            label_plc_heartbeat_pos.Size = new Size(64, 24);
+            label_plc_heartbeat_pos.TabIndex = 2;
+            label_plc_heartbeat_pos.Text = "心跳位";
+            // 
+            // label_plc_port
+            // 
+            label_plc_port.AutoSize = true;
+            label_plc_port.Location = new Point(365, 38);
+            label_plc_port.Name = "label_plc_port";
+            label_plc_port.Size = new Size(64, 24);
+            label_plc_port.TabIndex = 2;
+            label_plc_port.Text = "端口号";
+            // 
+            // comboBox_plc_ip
+            // 
+            comboBox_plc_ip.AutoCompleteMode = AutoCompleteMode.Suggest;
+            comboBox_plc_ip.AutoCompleteSource = AutoCompleteSource.ListItems;
+            comboBox_plc_ip.FormattingEnabled = true;
+            comboBox_plc_ip.Location = new Point(33, 67);
+            comboBox_plc_ip.Name = "comboBox_plc_ip";
+            comboBox_plc_ip.Size = new Size(295, 32);
+            comboBox_plc_ip.TabIndex = 0;
+            // 
+            // comboBox_plc_port
+            // 
+            comboBox_plc_port.AutoCompleteMode = AutoCompleteMode.Suggest;
+            comboBox_plc_port.AutoCompleteSource = AutoCompleteSource.ListItems;
+            comboBox_plc_port.FormattingEnabled = true;
+            comboBox_plc_port.Location = new Point(365, 65);
+            comboBox_plc_port.Name = "comboBox_plc_port";
+            comboBox_plc_port.Size = new Size(146, 32);
+            comboBox_plc_port.TabIndex = 1;
+            // 
+            // label_ok_btn_img
+            // 
+            label_ok_btn_img.AutoSize = true;
+            label_ok_btn_img.Location = new Point(28, 255);
+            label_ok_btn_img.Name = "label_ok_btn_img";
+            label_ok_btn_img.Size = new Size(154, 24);
+            label_ok_btn_img.TabIndex = 2;
+            label_ok_btn_img.Text = "【确认】按钮图片";
             // 
             // label_save_btn_img
             // 
@@ -281,6 +406,45 @@
             label_crv_header_img.TabIndex = 2;
             label_crv_header_img.Text = "【曲线】表头图片";
             // 
+            // comboBox_close_btn_img
+            // 
+            comboBox_close_btn_img.AutoCompleteMode = AutoCompleteMode.Suggest;
+            comboBox_close_btn_img.AutoCompleteSource = AutoCompleteSource.ListItems;
+            comboBox_close_btn_img.FormattingEnabled = true;
+            comboBox_close_btn_img.Location = new Point(433, 282);
+            comboBox_close_btn_img.Name = "comboBox_close_btn_img";
+            comboBox_close_btn_img.Size = new Size(245, 32);
+            comboBox_close_btn_img.TabIndex = 1;
+            // 
+            // comboBox_ok_btn_img
+            // 
+            comboBox_ok_btn_img.AutoCompleteMode = AutoCompleteMode.Suggest;
+            comboBox_ok_btn_img.AutoCompleteSource = AutoCompleteSource.ListItems;
+            comboBox_ok_btn_img.FormattingEnabled = true;
+            comboBox_ok_btn_img.Location = new Point(28, 282);
+            comboBox_ok_btn_img.Name = "comboBox_ok_btn_img";
+            comboBox_ok_btn_img.Size = new Size(245, 32);
+            comboBox_ok_btn_img.TabIndex = 1;
+            // 
+            // comboBox_yes_btn_img
+            // 
+            comboBox_yes_btn_img.AutoCompleteMode = AutoCompleteMode.Suggest;
+            comboBox_yes_btn_img.AutoCompleteSource = AutoCompleteSource.ListItems;
+            comboBox_yes_btn_img.FormattingEnabled = true;
+            comboBox_yes_btn_img.Location = new Point(433, 217);
+            comboBox_yes_btn_img.Name = "comboBox_yes_btn_img";
+            comboBox_yes_btn_img.Size = new Size(245, 32);
+            comboBox_yes_btn_img.TabIndex = 1;
+            // 
+            // button_close_btn_img
+            // 
+            button_close_btn_img.Location = new Point(684, 280);
+            button_close_btn_img.Name = "button_close_btn_img";
+            button_close_btn_img.Size = new Size(93, 34);
+            button_close_btn_img.TabIndex = 3;
+            button_close_btn_img.Text = "截图";
+            button_close_btn_img.UseVisualStyleBackColor = true;
+            // 
             // comboBox_save_btn_img
             // 
             comboBox_save_btn_img.AutoCompleteMode = AutoCompleteMode.Suggest;
@@ -290,6 +454,24 @@
             comboBox_save_btn_img.Name = "comboBox_save_btn_img";
             comboBox_save_btn_img.Size = new Size(245, 32);
             comboBox_save_btn_img.TabIndex = 1;
+            // 
+            // button_yes_btn_img
+            // 
+            button_yes_btn_img.Location = new Point(684, 215);
+            button_yes_btn_img.Name = "button_yes_btn_img";
+            button_yes_btn_img.Size = new Size(93, 34);
+            button_yes_btn_img.TabIndex = 3;
+            button_yes_btn_img.Text = "截图";
+            button_yes_btn_img.UseVisualStyleBackColor = true;
+            // 
+            // button_ok_btn_img
+            // 
+            button_ok_btn_img.Location = new Point(279, 280);
+            button_ok_btn_img.Name = "button_ok_btn_img";
+            button_ok_btn_img.Size = new Size(93, 34);
+            button_ok_btn_img.TabIndex = 3;
+            button_ok_btn_img.Text = "截图";
+            button_ok_btn_img.UseVisualStyleBackColor = true;
             // 
             // comboBox_blm_btn_img
             // 
@@ -387,103 +569,19 @@
             // 
             // button_start_fetch
             // 
-            button_start_fetch.Location = new Point(665, 331);
+            button_start_fetch.Location = new Point(665, 507);
             button_start_fetch.Name = "button_start_fetch";
             button_start_fetch.Size = new Size(112, 34);
             button_start_fetch.TabIndex = 3;
             button_start_fetch.Text = "开始抓取";
             button_start_fetch.UseVisualStyleBackColor = true;
             // 
-            // button_yes_btn_img
-            // 
-            button_yes_btn_img.Location = new Point(684, 215);
-            button_yes_btn_img.Name = "button_yes_btn_img";
-            button_yes_btn_img.Size = new Size(93, 34);
-            button_yes_btn_img.TabIndex = 3;
-            button_yes_btn_img.Text = "截图";
-            button_yes_btn_img.UseVisualStyleBackColor = true;
-            // 
-            // comboBox_yes_btn_img
-            // 
-            comboBox_yes_btn_img.AutoCompleteMode = AutoCompleteMode.Suggest;
-            comboBox_yes_btn_img.AutoCompleteSource = AutoCompleteSource.ListItems;
-            comboBox_yes_btn_img.FormattingEnabled = true;
-            comboBox_yes_btn_img.Location = new Point(433, 217);
-            comboBox_yes_btn_img.Name = "comboBox_yes_btn_img";
-            comboBox_yes_btn_img.Size = new Size(245, 32);
-            comboBox_yes_btn_img.TabIndex = 1;
-            // 
-            // label_yes_btn_img
-            // 
-            label_yes_btn_img.AutoSize = true;
-            label_yes_btn_img.Location = new Point(433, 190);
-            label_yes_btn_img.Name = "label_yes_btn_img";
-            label_yes_btn_img.Size = new Size(190, 24);
-            label_yes_btn_img.TabIndex = 2;
-            label_yes_btn_img.Text = "【是否替换】按钮图片";
-            // 
-            // button_ok_btn_img
-            // 
-            button_ok_btn_img.Location = new Point(279, 280);
-            button_ok_btn_img.Name = "button_ok_btn_img";
-            button_ok_btn_img.Size = new Size(93, 34);
-            button_ok_btn_img.TabIndex = 3;
-            button_ok_btn_img.Text = "截图";
-            button_ok_btn_img.UseVisualStyleBackColor = true;
-            // 
-            // button_close_btn_img
-            // 
-            button_close_btn_img.Location = new Point(684, 280);
-            button_close_btn_img.Name = "button_close_btn_img";
-            button_close_btn_img.Size = new Size(93, 34);
-            button_close_btn_img.TabIndex = 3;
-            button_close_btn_img.Text = "截图";
-            button_close_btn_img.UseVisualStyleBackColor = true;
-            // 
-            // comboBox_ok_btn_img
-            // 
-            comboBox_ok_btn_img.AutoCompleteMode = AutoCompleteMode.Suggest;
-            comboBox_ok_btn_img.AutoCompleteSource = AutoCompleteSource.ListItems;
-            comboBox_ok_btn_img.FormattingEnabled = true;
-            comboBox_ok_btn_img.Location = new Point(28, 282);
-            comboBox_ok_btn_img.Name = "comboBox_ok_btn_img";
-            comboBox_ok_btn_img.Size = new Size(245, 32);
-            comboBox_ok_btn_img.TabIndex = 1;
-            // 
-            // comboBox_close_btn_img
-            // 
-            comboBox_close_btn_img.AutoCompleteMode = AutoCompleteMode.Suggest;
-            comboBox_close_btn_img.AutoCompleteSource = AutoCompleteSource.ListItems;
-            comboBox_close_btn_img.FormattingEnabled = true;
-            comboBox_close_btn_img.Location = new Point(433, 282);
-            comboBox_close_btn_img.Name = "comboBox_close_btn_img";
-            comboBox_close_btn_img.Size = new Size(245, 32);
-            comboBox_close_btn_img.TabIndex = 1;
-            // 
-            // label_ok_btn_img
-            // 
-            label_ok_btn_img.AutoSize = true;
-            label_ok_btn_img.Location = new Point(28, 255);
-            label_ok_btn_img.Name = "label_ok_btn_img";
-            label_ok_btn_img.Size = new Size(154, 24);
-            label_ok_btn_img.TabIndex = 2;
-            label_ok_btn_img.Text = "【确认】按钮图片";
-            // 
-            // label_close_btn_img
-            // 
-            label_close_btn_img.AutoSize = true;
-            label_close_btn_img.Location = new Point(433, 255);
-            label_close_btn_img.Name = "label_close_btn_img";
-            label_close_btn_img.Size = new Size(154, 24);
-            label_close_btn_img.TabIndex = 2;
-            label_close_btn_img.Text = "【关闭】按钮图片";
-            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(11F, 24F);
             AutoScaleMode = AutoScaleMode.Font;
             AutoScroll = true;
-            ClientSize = new Size(829, 976);
+            ClientSize = new Size(829, 1168);
             Controls.Add(groupBox_curve_settings);
             Controls.Add(groupBox_storage_settings);
             Controls.Add(groupBox_realtime_log);
@@ -501,6 +599,8 @@
             groupBox_storage_settings.PerformLayout();
             groupBox_curve_settings.ResumeLayout(false);
             groupBox_curve_settings.PerformLayout();
+            groupBox_plc_settings.ResumeLayout(false);
+            groupBox_plc_settings.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -546,5 +646,14 @@
         private Button button_close_btn_img;
         private Button button_yes_btn_img;
         private Button button_ok_btn_img;
+        private GroupBox groupBox_plc_settings;
+        private Label label_plc_ip;
+        private Label label_plc_heartbeat_pos;
+        private Label label_plc_port;
+        private ComboBox comboBox_plc_ip;
+        private ComboBox comboBox_plc_port;
+        private TextBox textBox_plc_heartbeat_pos;
+        private TextBox textBox_plc_flag_pos;
+        private Label label_plc_flag_pos;
     }
 }

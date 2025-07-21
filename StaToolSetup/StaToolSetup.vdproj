@@ -44,6 +44,14 @@
             "PrerequisitesLocation" = "2:1"
             "Url" = "8:"
             "ComponentsUrl" = "8:"
+                "Items"
+                {
+                    "{EDC2488A-8267-493A-A98E-7D9C3B36CDF3}:.NETFramework,Version=v4.7.2"
+                    {
+                    "Name" = "8:Microsoft .NET Framework 4.7.2 (x86 and x64)"
+                    "ProductCode" = "8:.NETFramework,Version=v4.7.2"
+                    }
+                }
             }
         }
         "Release"
@@ -68,6 +76,14 @@
             "PrerequisitesLocation" = "2:1"
             "Url" = "8:"
             "ComponentsUrl" = "8:"
+                "Items"
+                {
+                    "{EDC2488A-8267-493A-A98E-7D9C3B36CDF3}:.NETFramework,Version=v4.7.2"
+                    {
+                    "Name" = "8:Microsoft .NET Framework 4.7.2 (x86 and x64)"
+                    "ProductCode" = "8:.NETFramework,Version=v4.7.2"
+                    }
+                }
             }
         }
     }
@@ -167,15 +183,15 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:StaToolSetup"
-        "ProductCode" = "8:{EC868B7E-8F6E-402E-8629-084BE924888A}"
-        "PackageCode" = "8:{D0C11854-656E-4D58-B6E1-FF328B0A10D2}"
+        "ProductCode" = "8:{735E0F4D-9FF0-4E64-9549-9AA909A6F539}"
+        "PackageCode" = "8:{5C46396F-5BF2-4837-B801-FBD3C931C27A}"
         "UpgradeCode" = "8:{4BD9A26F-AE9A-4419-8A09-50CABFBF0514}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:TRUE"
         "DetectNewerInstalledVersion" = "11:TRUE"
         "InstallAllUsers" = "11:TRUE"
-        "ProductVersion" = "8:0.0.3"
+        "ProductVersion" = "8:1.0.0"
         "Manufacturer" = "8:streen.jiang@outlook.com"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:"

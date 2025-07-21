@@ -27,11 +27,14 @@
             button_start_fetch = new Button();
             button_stop_fetch = new Button();
             label1 = new Label();
-            textBox_fetch_interval = new TextBox();
+            textBox_repeat_times = new TextBox();
             label2 = new Label();
             label3 = new Label();
             label4 = new Label();
             textBox_click_interval = new TextBox();
+            label5 = new Label();
+            label6 = new Label();
+            textBox_check_interval = new TextBox();
             SuspendLayout();
             // 
             // label_info
@@ -45,7 +48,7 @@
             // 
             // button_start_fetch
             // 
-            button_start_fetch.Location = new Point(68, 165);
+            button_start_fetch.Location = new Point(67, 207);
             button_start_fetch.Name = "button_start_fetch";
             button_start_fetch.Size = new Size(112, 34);
             button_start_fetch.TabIndex = 1;
@@ -55,7 +58,7 @@
             // button_stop_fetch
             // 
             button_stop_fetch.Enabled = false;
-            button_stop_fetch.Location = new Point(208, 165);
+            button_stop_fetch.Location = new Point(207, 207);
             button_stop_fetch.Name = "button_stop_fetch";
             button_stop_fetch.Size = new Size(112, 34);
             button_stop_fetch.TabIndex = 1;
@@ -69,24 +72,24 @@
             label1.Name = "label1";
             label1.Size = new Size(118, 24);
             label1.TabIndex = 2;
-            label1.Text = "曲线抓取间隔";
+            label1.Text = "重复抓取次数";
             // 
-            // textBox_fetch_interval
+            // textBox_repeat_times
             // 
-            textBox_fetch_interval.Location = new Point(203, 76);
-            textBox_fetch_interval.Name = "textBox_fetch_interval";
-            textBox_fetch_interval.Size = new Size(87, 30);
-            textBox_fetch_interval.TabIndex = 3;
-            textBox_fetch_interval.Text = "5000";
+            textBox_repeat_times.Location = new Point(203, 76);
+            textBox_repeat_times.Name = "textBox_repeat_times";
+            textBox_repeat_times.Size = new Size(87, 30);
+            textBox_repeat_times.TabIndex = 3;
+            textBox_repeat_times.Text = "2";
             // 
             // label2
             // 
             label2.AutoSize = true;
             label2.Location = new Point(296, 79);
             label2.Name = "label2";
-            label2.Size = new Size(35, 24);
+            label2.Size = new Size(28, 24);
             label2.TabIndex = 2;
-            label2.Text = "ms";
+            label2.Text = "次";
             // 
             // label3
             // 
@@ -114,14 +117,43 @@
             textBox_click_interval.TabIndex = 3;
             textBox_click_interval.Text = "2000";
             // 
+            // label5
+            // 
+            label5.AutoSize = true;
+            label5.Location = new Point(64, 157);
+            label5.Name = "label5";
+            label5.Size = new Size(118, 24);
+            label5.TabIndex = 2;
+            label5.Text = "标识检查间隔";
+            // 
+            // label6
+            // 
+            label6.AutoSize = true;
+            label6.Location = new Point(296, 154);
+            label6.Name = "label6";
+            label6.Size = new Size(35, 24);
+            label6.TabIndex = 2;
+            label6.Text = "ms";
+            // 
+            // textBox_check_interval
+            // 
+            textBox_check_interval.Location = new Point(203, 151);
+            textBox_check_interval.Name = "textBox_check_interval";
+            textBox_check_interval.Size = new Size(87, 30);
+            textBox_check_interval.TabIndex = 3;
+            textBox_check_interval.Text = "2000";
+            // 
             // ImageButtonClickerToolForm
             // 
             AutoScaleDimensions = new SizeF(11F, 24F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(405, 221);
+            ClientSize = new Size(405, 271);
+            Controls.Add(textBox_check_interval);
             Controls.Add(textBox_click_interval);
+            Controls.Add(label6);
             Controls.Add(label4);
-            Controls.Add(textBox_fetch_interval);
+            Controls.Add(textBox_repeat_times);
+            Controls.Add(label5);
             Controls.Add(label3);
             Controls.Add(label2);
             Controls.Add(label1);
@@ -145,10 +177,13 @@
         private Button button_start_fetch;
         private Button button_stop_fetch;
         private Label label1;
-        private TextBox textBox_fetch_interval;
+        private TextBox textBox_repeat_times;
         private Label label2;
         private Label label3;
         private Label label4;
         private TextBox textBox_click_interval;
+        private Label label5;
+        private Label label6;
+        private TextBox textBox_check_interval;
     }
 }
