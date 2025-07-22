@@ -21,6 +21,7 @@ namespace STaTool.utils {
         private string _plcIp;
         private int _plcPort;
         private volatile bool _plcFlagDetected = false;
+        private const int _checkDelay = 500;
 
         public ImageButtonClickerToolForm(List<string> imageButtons, string plcIp, int plcPort, Action resetControls) {
             log = LogManager.GetLogger(GetType());
@@ -91,6 +92,7 @@ namespace STaTool.utils {
             var fx5UModbusClient = new Fx5uModbusClient();
             try {
                 fx5UModbusClient.Connect(_plcIp, _plcPort);
+                WidgetUtils.AppendMsg("PLC连接成功！");
             } catch (Exception ex) {
                 WidgetUtils.ShowWarningPopUp($"无法使用【ip={_plcIp}，port={_plcPort}】连接到PLC！");
                 log.Warn($"无法使用【ip={_plcIp}，port={_plcPort}】连接到PLC！", ex);
@@ -121,44 +123,72 @@ namespace STaTool.utils {
 
                 var plcService = new PlcPollingService(fx5UModbusClient);
                 var clicker = new ImageRecognitionClicker();
-                if (clicker.InitOk) {
-                    try {
-                        _ = plcService.StartPollingAsync(checkInterval, config.PlcFlagPos, config.PlcHeartBeatPos, flag => {
+
+                if (!clicker.InitOk) {
+                    WidgetUtils.AppendMsg("图像识别初始化失败，请检查截图是否正确！");
+                    return;
+                }
+
+                try {
+                    // 启动 PLC 轮询服务
+                    _ = plcService.StartPollingAsync(
+                        checkInterval,
+                        config.PlcFlagPos,
+                        config.PlcHeartBeatPos,
+                        flag => {
                             _plcFlagDetected = flag;
-                        }, token);
+                            if (flag) {
+                                WidgetUtils.AppendMsg("收到PLC抓取曲线指令，正在进行曲线抓取...");
+                            }
+                        },
+                        token);
 
-                        while (!token.IsCancellationRequested) {
-                            if (_plcFlagDetected) {
-                                int count = 0;
-
-                                while (count < repeatTimes) {
+                    // 主循环
+                    while (!token.IsCancellationRequested) {
+                        if (_plcFlagDetected) {
+                            int count = 0;
+                            while (count < repeatTimes && !token.IsCancellationRequested) {
+                                for (int i = 0; i < _imageButtons.Count; i++) {
                                     token.ThrowIfCancellationRequested();
 
-                                    for (int i = 0; i < _imageButtons.Count; i++) {
-                                        string btnImg = FileUtil.GetImagePath(_imageButtons[i]);
-                                        if (i == 1) {
-                                            clicker.ClickButtonByImage_Special(btnImg);
-                                        } else {
-                                            clicker.ClickButtonByImage(btnImg);
-                                        }
-
-                                        await Task.Delay(repeatTimes, token);
+                                    string btnImg = FileUtil.GetImagePath(_imageButtons[i]);
+                                    if (i == 1) {
+                                        clicker.ClickButtonByImage_Special(btnImg);
+                                    } else {
+                                        clicker.ClickButtonByImage(btnImg);
                                     }
 
-                                    count++;
+                                    await Task.Delay(clickInterval, token);
                                 }
 
-                                fx5UModbusClient.WriteCoil(config.PlcFlagPos, false);
+                                count++;
+                                WidgetUtils.AppendMsg($"第 {count} 次曲线抓取完成！");
                             }
 
-                            await Task.Delay(clickInterval, token);
+                            // 重置 PLC 标志位
+                            fx5UModbusClient.WriteRegister(config.PlcFlagPos, 0);
+                            WidgetUtils.AppendMsg("曲线抓取全部完成！已重置PLC标识。");
                         }
-                    } catch (TaskCanceledException) {
-                    } finally {
-                        fx5UModbusClient.WriteCoil(config.PlcFlagPos, false);
+
+                        await Task.Delay(_checkDelay, token);
                     }
+                } catch (TaskCanceledException) {
+                    WidgetUtils.AppendMsg("曲线抓取已取消。");
+                } catch (Exception ex) {
+                    log.Error($"曲线抓取过程中发生异常: {ex.Message}", ex);
+                    WidgetUtils.AppendMsg($"发生错误: {ex.Message}");
+                } finally {
+                    // 确保资源释放
+                    fx5UModbusClient.WriteRegister(config.PlcFlagPos, 0);
+                    fx5UModbusClient.Disconnect();
+                    WidgetUtils.AppendMsg("PLC连接已断开...");
+
+                    fetchingCurveData = false;
+
+                    button_start_fetch.Enabled = true;
+                    button_stop_fetch.Enabled = false;
                 }
-            });
+            }, token); // 将 token 传递到最外层的 Task.Run
         }
 
         private void ButtonStopFetch_Click(object? sender, EventArgs e) {
