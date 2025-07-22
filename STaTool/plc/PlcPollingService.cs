@@ -27,7 +27,7 @@ namespace STaTool.plc {
                     try {
                         // 交替写入 1 和 0 (true/false)
                         _lastHeartbeatValue = !_lastHeartbeatValue;
-                        _client.WriteCoil(heartBeatAddress, _lastHeartbeatValue);
+                        _client.WriteRegister(heartBeatAddress, _lastHeartbeatValue ? 1 : 0);
 
                         log.Debug($"发送心跳信号: {heartBeatAddress} = {_lastHeartbeatValue}");
                     } catch (Exception hbEx) {
@@ -38,7 +38,7 @@ namespace STaTool.plc {
                     // ===== 主业务逻辑 =====
                     try {
                         log.Info("读取到标识，开始执行指定逻辑...");
-                        setIsTargetReached(_client.ReadCoil(targetAddress));
+                        setIsTargetReached(_client.ReadRegister(targetAddress) == 1);
                     } catch (Exception readEx) {
                         log.Error($"数据读取失败: {readEx.Message}", readEx);
                     }
@@ -58,7 +58,7 @@ namespace STaTool.plc {
             } finally {
                 // 清理时重置心跳
                 try {
-                    _client.WriteCoil(heartBeatAddress, false);
+                    _client.WriteRegister(heartBeatAddress, 0);
                     log.Info("服务停止，心跳重置为0");
                 } catch {
                     // 尽力清理，忽略失败
