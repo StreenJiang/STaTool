@@ -43,6 +43,10 @@ namespace STaTool.utils {
             return Path.Combine(IMAGE_DIRECTORY, $"{imageName}.png");
         }
 
+        public static string GetImageDirectory() {
+            return IMAGE_DIRECTORY;
+        }
+
         public static Config LoadConfig() {
             if (!File.Exists(CONFIG_FILE_PATH)) {
                 return new Config();
