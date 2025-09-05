@@ -73,6 +73,7 @@
             button_capture_update_btn_img = new Button();
             button_start_fetch = new Button();
             checkBox_auto_startup = new CheckBox();
+            checkBox_auto_fetch = new CheckBox();
             groupBox1 = new GroupBox();
             groupBox_connection_info.SuspendLayout();
             groupBox_realtime_log.SuspendLayout();
@@ -589,8 +590,19 @@
             checkBox_auto_startup.Text = "开机自动启动";
             checkBox_auto_startup.UseVisualStyleBackColor = true;
             // 
+            // checkBox_auto_fetch
+            // 
+            checkBox_auto_fetch.AutoSize = true;
+            checkBox_auto_fetch.Location = new Point(200, 39);
+            checkBox_auto_fetch.Name = "checkBox_auto_fetch";
+            checkBox_auto_fetch.Size = new Size(120, 28);
+            checkBox_auto_fetch.TabIndex = 1;
+            checkBox_auto_fetch.Text = "启动自动抓取";
+            checkBox_auto_fetch.UseVisualStyleBackColor = true;
+            // 
             // groupBox1
             // 
+            groupBox1.Controls.Add(checkBox_auto_fetch);
             groupBox1.Controls.Add(checkBox_auto_startup);
             groupBox1.Location = new Point(12, 1105);
             groupBox1.Name = "groupBox1";
@@ -682,6 +694,7 @@
         private TextBox textBox_plc_flag_pos;
         private Label label_plc_flag_pos;
         private CheckBox checkBox_auto_startup;
+        private CheckBox checkBox_auto_fetch;
         private GroupBox groupBox1;
     }
 }

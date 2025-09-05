@@ -26,6 +26,9 @@ namespace STaTool {
             // Initialize auto startup checkbox
             checkBox_auto_startup.Checked = config.AutoStartup;
 
+            // Initialize auto fetch checkbox
+            checkBox_auto_fetch.Checked = config.AutoStartFetch;
+
             // Initialize default images from resources if Button Images folder is empty
             bool imagesInitialized = ResourceImageManager.InitializeDefaultImages();
             if (imagesInitialized) {
@@ -113,6 +116,7 @@ namespace STaTool {
             button_clear_log.Click += ButtonClearLog_Click;
             button_browse.Click += ButtonBrowse_Click;
             checkBox_auto_startup.CheckedChanged += CheckBoxAutoStartup_CheckedChanged;
+            checkBox_auto_fetch.CheckedChanged += CheckBoxAutoFetch_CheckedChanged;
 
             button_capture_update_btn_img.Click += (s, e)
                 => ButtonCaptureBtnImage_Click(comboBox_update_btn_img, "更新按钮", cfg => cfg.UpdateBtnImg);
@@ -134,6 +138,19 @@ namespace STaTool {
             // Initialize log
             WidgetUtils.TextBox_realtime_log = textBox_realtime_log;
             WidgetUtils.AppendMsg("等待连接...");
+
+            // Auto start fetch if enabled
+            if (config.AutoStartFetch) {
+                // Use a timer to delay the auto start to ensure UI is fully loaded
+                var timer = new System.Windows.Forms.Timer();
+                timer.Interval = 1000; // 1 second delay
+                timer.Tick += (s, e) => {
+                    timer.Stop();
+                    timer.Dispose();
+                    AutoStartFetch();
+                };
+                timer.Start();
+            }
         }
 
         private void ComboBox_Ip_SelectedIndexChanged(object? sender, EventArgs e) {
@@ -446,6 +463,58 @@ namespace STaTool {
             } catch (Exception ex) {
                 WidgetUtils.AppendMsg($"❌ 设置开机自启动失败: {ex.Message}");
                 log.Error($"Set auto startup failed: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 启动自动抓取复选框变化事件
+        /// </summary>
+        private void CheckBoxAutoFetch_CheckedChanged(object? sender, EventArgs e) {
+            try {
+                bool enable = checkBox_auto_fetch.Checked;
+                config.AutoStartFetch = enable;
+                FileUtil.SaveConfig(config);
+                WidgetUtils.AppendMsg(enable ? "✅ 启动自动抓取 - 已启用" : "❎ 启动自动抓取 - 已禁用");
+            } catch (Exception ex) {
+                WidgetUtils.AppendMsg($"❌ 设置启动自动抓取失败: {ex.Message}");
+                log.Error($"Set auto fetch failed: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 自动启动抓取功能
+        /// </summary>
+        private void AutoStartFetch() {
+            try {
+                log.Info("Auto start fetch triggered");
+                WidgetUtils.AppendMsg("🚀 自动启动抓取...");
+
+                // 检查是否有必要的图片配置
+                if (string.IsNullOrWhiteSpace(comboBox_update_btn_img.Text) ||
+                    string.IsNullOrWhiteSpace(comboBox_crv_header_img.Text) ||
+                    string.IsNullOrWhiteSpace(comboBox_export_btn_img.Text) ||
+                    string.IsNullOrWhiteSpace(comboBox_blm_btn_img.Text) ||
+                    string.IsNullOrWhiteSpace(comboBox_save_btn_img.Text) ||
+                    string.IsNullOrWhiteSpace(comboBox_yes_btn_img.Text) ||
+                    string.IsNullOrWhiteSpace(comboBox_ok_btn_img.Text) ||
+                    string.IsNullOrWhiteSpace(comboBox_close_btn_img.Text)) {
+                    WidgetUtils.AppendMsg("❌ 自动抓取失败：请先配置所有按钮图片");
+                    return;
+                }
+                // 检查PLC配置
+                if (string.IsNullOrWhiteSpace(comboBox_plc_ip.Text) ||
+                    string.IsNullOrWhiteSpace(comboBox_plc_port.Text) ||
+                    string.IsNullOrWhiteSpace(textBox_plc_flag_pos.Text) ||
+                    string.IsNullOrWhiteSpace(textBox_plc_heartbeat_pos.Text)) {
+                    WidgetUtils.AppendMsg("❌ 自动抓取失败：请先配置PLC连接信息（IP、端口、标志位、心跳位）");
+                    return;
+                }
+
+                // 调用开始抓取按钮的逻辑
+                ButtonStartFetch_Click(this, EventArgs.Empty);
+            } catch (Exception ex) {
+                WidgetUtils.AppendMsg($"❌ 自动抓取失败: {ex.Message}");
+                log.Error($"Auto start fetch failed: {ex.Message}", ex);
             }
         }
 
