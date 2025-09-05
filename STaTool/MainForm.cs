@@ -23,6 +23,15 @@ namespace STaTool {
             // Load config
             config = FileUtil.LoadConfig();
 
+            // Initialize auto startup checkbox
+            checkBox_auto_startup.Checked = config.AutoStartup;
+
+            // Initialize default images from resources if Button Images folder is empty
+            bool imagesInitialized = ResourceImageManager.InitializeDefaultImages();
+            if (imagesInitialized) {
+                WidgetUtils.AppendMsg("✅ 已初始化默认按钮图片");
+            }
+
             // Initialize data
             if (config.Ip.Count > 0) {
                 comboBox_ip.Items.AddRange(config.Ip.ToArray());
@@ -33,16 +42,16 @@ namespace STaTool {
                 comboBox_port.SelectedIndex = 0;
             }
 
-            _loadImages(config.UpdateBtnImg, comboBox_update_btn_img);
-            _loadImages(config.CrvHeaderImg, comboBox_crv_header_img);
-            _loadImages(config.ExportBtnImg, comboBox_export_btn_img);
-            _loadImages(config.BlmBtnImg, comboBox_blm_btn_img);
-            _loadImages(config.SaveBtnImg, comboBox_save_btn_img);
-            _loadImages(config.YesBtnImg, comboBox_yes_btn_img);
-            _loadImages(config.OkBtnImg, comboBox_ok_btn_img);
-            _loadImages(config.CloseBtnImg, comboBox_close_btn_img);
+            _loadImages(config.UpdateBtnImg, comboBox_update_btn_img, "更新按钮图片");
+            _loadImages(config.CrvHeaderImg, comboBox_crv_header_img, "曲线表头图片");
+            _loadImages(config.ExportBtnImg, comboBox_export_btn_img, "导出按钮图片");
+            _loadImages(config.BlmBtnImg, comboBox_blm_btn_img, "BLM按钮图片");
+            _loadImages(config.SaveBtnImg, comboBox_save_btn_img, "保存按钮图片");
+            _loadImages(config.YesBtnImg, comboBox_yes_btn_img, "是否替换按钮图片");
+            _loadImages(config.OkBtnImg, comboBox_ok_btn_img, "确认按钮图片");
+            _loadImages(config.CloseBtnImg, comboBox_close_btn_img, "关闭按钮图片");
 
-            void _loadImages(Queue<string> queue, ComboBox box) {
+            void _loadImages(Queue<string> queue, ComboBox box, string defaultName) {
                 if (queue.Count > 0) {
                     // Check if image is still there
                     List<string> imageNamesTemp = new();
@@ -64,6 +73,16 @@ namespace STaTool {
                     }
 
                     FileUtil.SaveConfig(config);
+                } else {
+                    // If no images in config, load from Button Images folder
+                    LoadDefaultImagesFromFolder(box, defaultName);
+                    // After loading, if an item was successfully added to the ComboBox, save it to config
+                    if (box.Items.Count > 0) {
+                        // The LoadDefaultImagesFromFolder method adds 'defaultName' if successful.
+                        // So, if items exist, we can assume defaultName was added.
+                        queue.Enqueue(defaultName);
+                        FileUtil.SaveConfig(config);
+                    }
                 }
             }
 
@@ -93,6 +112,7 @@ namespace STaTool {
             button_start_fetch.Click += ButtonStartFetch_Click;
             button_clear_log.Click += ButtonClearLog_Click;
             button_browse.Click += ButtonBrowse_Click;
+            checkBox_auto_startup.CheckedChanged += CheckBoxAutoStartup_CheckedChanged;
 
             button_capture_update_btn_img.Click += (s, e)
                 => ButtonCaptureBtnImage_Click(comboBox_update_btn_img, "更新按钮", cfg => cfg.UpdateBtnImg);
@@ -404,6 +424,52 @@ namespace STaTool {
 
                 // Show the selected folder path in a message box or store it in a variable
                 textBox_storage_path.Text = selectedFolderPath;
+            }
+        }
+
+        /// <summary>
+        /// 开机自启动复选框变化事件
+        /// </summary>
+        private void CheckBoxAutoStartup_CheckedChanged(object? sender, EventArgs e) {
+            try {
+                bool enable = checkBox_auto_startup.Checked;
+                bool success = AutoStartupManager.SetAutoStartup(enable);
+
+                if (success) {
+                    config.AutoStartup = enable;
+                    FileUtil.SaveConfig(config);
+                    WidgetUtils.AppendMsg(enable ? "✅ 开机自动启动 - 已启用" : "❎ 开机自动启动 - 已禁用");
+                } else {
+                    checkBox_auto_startup.Checked = !enable; // 恢复原状态
+                    WidgetUtils.AppendMsg("❌ 设置开机自启动失败，请检查权限");
+                }
+            } catch (Exception ex) {
+                WidgetUtils.AppendMsg($"❌ 设置开机自启动失败: {ex.Message}");
+                log.Error($"Set auto startup failed: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 从Button Images文件夹加载默认图片到ComboBox
+        /// </summary>
+        /// <param name="comboBox">目标ComboBox</param>
+        private void LoadDefaultImagesFromFolder(ComboBox comboBox, string defaultName) {
+            try {
+                // Check if the specific default image exists in the "Button Images" folder.
+                // FileUtil.ImageExists checks for the image name with a .png extension.
+                if (FileUtil.ImageExists(defaultName)) {
+                    // Clear any existing items in the ComboBox, as only one image is needed.
+                    comboBox.Items.Clear();
+                    // Add only this specific default image name to the ComboBox.
+                    comboBox.Items.Add(defaultName);
+                    // Select the added image.
+                    comboBox.SelectedIndex = 0;
+                    log.Info($"已加载默认图片 '{defaultName}' 到 {comboBox.Name}");
+                } else {
+                    log.Warn($"默认图片 '{defaultName}' 不存在于Button Images文件夹中，无法加载到 {comboBox.Name}");
+                }
+            } catch (Exception ex) {
+                log.Error($"加载默认图片失败: {ex.Message}", ex);
             }
         }
     }

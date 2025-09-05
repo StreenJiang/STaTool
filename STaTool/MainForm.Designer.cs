@@ -72,11 +72,14 @@
             comboBox_update_btn_img = new ComboBox();
             button_capture_update_btn_img = new Button();
             button_start_fetch = new Button();
+            checkBox_auto_startup = new CheckBox();
+            groupBox1 = new GroupBox();
             groupBox_connection_info.SuspendLayout();
             groupBox_realtime_log.SuspendLayout();
             groupBox_storage_settings.SuspendLayout();
             groupBox_curve_settings.SuspendLayout();
             groupBox_plc_settings.SuspendLayout();
+            groupBox1.SuspendLayout();
             SuspendLayout();
             // 
             // groupBox_connection_info
@@ -155,7 +158,7 @@
             // 
             groupBox_realtime_log.Controls.Add(button_clear_log);
             groupBox_realtime_log.Controls.Add(textBox_realtime_log);
-            groupBox_realtime_log.Location = new Point(12, 868);
+            groupBox_realtime_log.Location = new Point(12, 813);
             groupBox_realtime_log.Name = "groupBox_realtime_log";
             groupBox_realtime_log.Size = new Size(805, 286);
             groupBox_realtime_log.TabIndex = 1;
@@ -189,7 +192,7 @@
             groupBox_storage_settings.Controls.Add(button_browse);
             groupBox_storage_settings.Controls.Add(textBox_storage_path);
             groupBox_storage_settings.Controls.Add(label_storage_path);
-            groupBox_storage_settings.Location = new Point(12, 730);
+            groupBox_storage_settings.Location = new Point(12, 675);
             groupBox_storage_settings.Name = "groupBox_storage_settings";
             groupBox_storage_settings.Size = new Size(805, 132);
             groupBox_storage_settings.TabIndex = 2;
@@ -251,7 +254,7 @@
             groupBox_curve_settings.Controls.Add(button_start_fetch);
             groupBox_curve_settings.Location = new Point(12, 154);
             groupBox_curve_settings.Name = "groupBox_curve_settings";
-            groupBox_curve_settings.Size = new Size(805, 570);
+            groupBox_curve_settings.Size = new Size(805, 515);
             groupBox_curve_settings.TabIndex = 3;
             groupBox_curve_settings.TabStop = false;
             groupBox_curve_settings.Text = "曲线抓取配置";
@@ -284,23 +287,23 @@
             groupBox_plc_settings.Controls.Add(label_plc_port);
             groupBox_plc_settings.Controls.Add(comboBox_plc_ip);
             groupBox_plc_settings.Controls.Add(comboBox_plc_port);
-            groupBox_plc_settings.Location = new Point(28, 350);
+            groupBox_plc_settings.Location = new Point(28, 333);
             groupBox_plc_settings.Name = "groupBox_plc_settings";
-            groupBox_plc_settings.Size = new Size(749, 136);
+            groupBox_plc_settings.Size = new Size(749, 119);
             groupBox_plc_settings.TabIndex = 0;
             groupBox_plc_settings.TabStop = false;
             groupBox_plc_settings.Text = "PLC配置";
             // 
             // textBox_plc_flag_pos
             // 
-            textBox_plc_flag_pos.Location = new Point(647, 65);
+            textBox_plc_flag_pos.Location = new Point(647, 60);
             textBox_plc_flag_pos.Name = "textBox_plc_flag_pos";
             textBox_plc_flag_pos.Size = new Size(64, 30);
             textBox_plc_flag_pos.TabIndex = 3;
             // 
             // textBox_plc_heartbeat_pos
             // 
-            textBox_plc_heartbeat_pos.Location = new Point(551, 65);
+            textBox_plc_heartbeat_pos.Location = new Point(551, 60);
             textBox_plc_heartbeat_pos.Name = "textBox_plc_heartbeat_pos";
             textBox_plc_heartbeat_pos.Size = new Size(64, 30);
             textBox_plc_heartbeat_pos.TabIndex = 2;
@@ -308,7 +311,7 @@
             // label_plc_flag_pos
             // 
             label_plc_flag_pos.AutoSize = true;
-            label_plc_flag_pos.Location = new Point(647, 38);
+            label_plc_flag_pos.Location = new Point(647, 33);
             label_plc_flag_pos.Name = "label_plc_flag_pos";
             label_plc_flag_pos.Size = new Size(64, 24);
             label_plc_flag_pos.TabIndex = 2;
@@ -317,7 +320,7 @@
             // label_plc_ip
             // 
             label_plc_ip.AutoSize = true;
-            label_plc_ip.Location = new Point(33, 40);
+            label_plc_ip.Location = new Point(33, 35);
             label_plc_ip.Name = "label_plc_ip";
             label_plc_ip.Size = new Size(62, 24);
             label_plc_ip.TabIndex = 2;
@@ -326,7 +329,7 @@
             // label_plc_heartbeat_pos
             // 
             label_plc_heartbeat_pos.AutoSize = true;
-            label_plc_heartbeat_pos.Location = new Point(551, 38);
+            label_plc_heartbeat_pos.Location = new Point(551, 33);
             label_plc_heartbeat_pos.Name = "label_plc_heartbeat_pos";
             label_plc_heartbeat_pos.Size = new Size(64, 24);
             label_plc_heartbeat_pos.TabIndex = 2;
@@ -335,7 +338,7 @@
             // label_plc_port
             // 
             label_plc_port.AutoSize = true;
-            label_plc_port.Location = new Point(365, 38);
+            label_plc_port.Location = new Point(365, 33);
             label_plc_port.Name = "label_plc_port";
             label_plc_port.Size = new Size(64, 24);
             label_plc_port.TabIndex = 2;
@@ -346,7 +349,7 @@
             comboBox_plc_ip.AutoCompleteMode = AutoCompleteMode.Suggest;
             comboBox_plc_ip.AutoCompleteSource = AutoCompleteSource.ListItems;
             comboBox_plc_ip.FormattingEnabled = true;
-            comboBox_plc_ip.Location = new Point(33, 67);
+            comboBox_plc_ip.Location = new Point(33, 62);
             comboBox_plc_ip.Name = "comboBox_plc_ip";
             comboBox_plc_ip.Size = new Size(295, 32);
             comboBox_plc_ip.TabIndex = 0;
@@ -356,7 +359,7 @@
             comboBox_plc_port.AutoCompleteMode = AutoCompleteMode.Suggest;
             comboBox_plc_port.AutoCompleteSource = AutoCompleteSource.ListItems;
             comboBox_plc_port.FormattingEnabled = true;
-            comboBox_plc_port.Location = new Point(365, 65);
+            comboBox_plc_port.Location = new Point(365, 60);
             comboBox_plc_port.Name = "comboBox_plc_port";
             comboBox_plc_port.Size = new Size(146, 32);
             comboBox_plc_port.TabIndex = 1;
@@ -569,19 +572,40 @@
             // 
             // button_start_fetch
             // 
-            button_start_fetch.Location = new Point(665, 507);
+            button_start_fetch.Location = new Point(665, 467);
             button_start_fetch.Name = "button_start_fetch";
             button_start_fetch.Size = new Size(112, 34);
             button_start_fetch.TabIndex = 3;
             button_start_fetch.Text = "开始抓取";
             button_start_fetch.UseVisualStyleBackColor = true;
             // 
+            // checkBox_auto_startup
+            // 
+            checkBox_auto_startup.AutoSize = true;
+            checkBox_auto_startup.Location = new Point(28, 39);
+            checkBox_auto_startup.Name = "checkBox_auto_startup";
+            checkBox_auto_startup.Size = new Size(144, 28);
+            checkBox_auto_startup.TabIndex = 0;
+            checkBox_auto_startup.Text = "开机自动启动";
+            checkBox_auto_startup.UseVisualStyleBackColor = true;
+            // 
+            // groupBox1
+            // 
+            groupBox1.Controls.Add(checkBox_auto_startup);
+            groupBox1.Location = new Point(12, 1105);
+            groupBox1.Name = "groupBox1";
+            groupBox1.Size = new Size(805, 83);
+            groupBox1.TabIndex = 4;
+            groupBox1.TabStop = false;
+            groupBox1.Text = "其他设置";
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(11F, 24F);
             AutoScaleMode = AutoScaleMode.Font;
             AutoScroll = true;
-            ClientSize = new Size(829, 1168);
+            ClientSize = new Size(829, 1200);
+            Controls.Add(groupBox1);
             Controls.Add(groupBox_curve_settings);
             Controls.Add(groupBox_storage_settings);
             Controls.Add(groupBox_realtime_log);
@@ -601,6 +625,8 @@
             groupBox_curve_settings.PerformLayout();
             groupBox_plc_settings.ResumeLayout(false);
             groupBox_plc_settings.PerformLayout();
+            groupBox1.ResumeLayout(false);
+            groupBox1.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -655,5 +681,7 @@
         private TextBox textBox_plc_heartbeat_pos;
         private TextBox textBox_plc_flag_pos;
         private Label label_plc_flag_pos;
+        private CheckBox checkBox_auto_startup;
+        private GroupBox groupBox1;
     }
 }

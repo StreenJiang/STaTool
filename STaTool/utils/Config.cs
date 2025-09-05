@@ -18,5 +18,6 @@ namespace STaTool.utils {
         public int ClickInterval { get; set; } = 0;
         public int CheckInterval { get; set; } = 0;
         public string StoragePath { get; set; } = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tightening data");
+        public bool AutoStartup { get; set; } = false;
     }
 }
