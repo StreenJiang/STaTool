@@ -7,7 +7,7 @@ namespace STaTool.utils {
     /// </summary>
     public static class AutoStartupManager {
         private static readonly ILog log = LogManager.GetLogger(typeof(AutoStartupManager));
-        private const string REGISTRY_KEY_PATH = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
+        private const string REGISTRY_KEY_PATH = "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Run";
         private const string APP_NAME = "STaTool";
 
         /// <summary>
@@ -17,21 +17,19 @@ namespace STaTool.utils {
         /// <returns>操作是否成功</returns>
         public static bool SetAutoStartup(bool enable) {
             try {
-                using (RegistryKey? key = Registry.CurrentUser.OpenSubKey(REGISTRY_KEY_PATH, true)) {
-                    if (key == null) {
-                        log.Error("无法打开注册表项");
-                        return false;
-                    }
+                RegistryKey? key = Registry.LocalMachine.OpenSubKey(REGISTRY_KEY_PATH, true);
+                key ??= Registry.LocalMachine.CreateSubKey(REGISTRY_KEY_PATH, true);
 
-                    if (enable) {
-                        string appPath = Application.ExecutablePath;
-                        key.SetValue(APP_NAME, $"\"{appPath}\"");
-                        log.Info($"已设置开机自启动: {appPath}");
-                    } else {
-                        key.DeleteValue(APP_NAME, false);
-                        log.Info("已取消开机自启动");
-                    }
+                if (enable) {
+                    string appPath = Application.ExecutablePath;
+                    key.SetValue(APP_NAME, $"\"{appPath}\"");
+                    log.Info($"已设置开机自启动: {appPath}");
+                } else {
+                    key.DeleteValue(APP_NAME, false);
+                    log.Info("已取消开机自启动");
                 }
+
+                key.Close();
                 return true;
             } catch (Exception ex) {
                 log.Error($"设置开机自启动失败: {ex.Message}", ex);
