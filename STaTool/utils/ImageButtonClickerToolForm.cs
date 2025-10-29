@@ -1,4 +1,5 @@
-﻿using log4net;
+using log4net;
+using StaTool.constants;
 using STaTool.plc;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -129,6 +130,7 @@ namespace STaTool.utils {
                     return;
                 }
 
+                bool failed = false;
                 try {
                     // 启动 PLC 轮询服务
                     _ = plcService.StartPollingAsync(
@@ -147,6 +149,8 @@ namespace STaTool.utils {
                     while (!token.IsCancellationRequested) {
                         if (_plcFlagDetected) {
                             int count = 0;
+                            failed = false;
+
                             while (count < repeatTimes && !token.IsCancellationRequested) {
                                 for (int i = 0; i < _imageButtons.Count; i++) {
                                     token.ThrowIfCancellationRequested();
@@ -155,19 +159,26 @@ namespace STaTool.utils {
                                     if (i == 1) {
                                         clicker.ClickButtonByImage_Special(btnImg);
                                     } else {
-                                        clicker.ClickButtonByImage(btnImg);
+                                        bool found = clicker.ClickButtonByImage(btnImg);
+                                        if (i == 6 && !found) {
+                                            failed = true;
+                                            break;
+                                        }
                                     }
 
                                     await Task.Delay(clickInterval, token);
                                 }
 
                                 count++;
-                                WidgetUtils.AppendMsg($"第 {count} 次曲线抓取完成！");
+                                WidgetUtils.AppendMsg($"第 {count} 次曲线抓取完毕，结果：{(failed ? "抓取失败" : "抓取成功")}");
+                                if (!failed) {
+                                    break;
+                                }
                             }
 
                             // 重置 PLC 标志位
-                            fx5UModbusClient.WriteRegister(config.PlcFlagPos, 0);
-                            WidgetUtils.AppendMsg("曲线抓取全部完成！已重置PLC标识。");
+                            SetValueByResult(fx5UModbusClient, config.PlcFlagPos, failed);
+                            WidgetUtils.AppendMsg("曲线抓取完成。已重置PLC标识。");
                         }
 
                         await Task.Delay(_checkDelay, token);
@@ -179,7 +190,7 @@ namespace STaTool.utils {
                     WidgetUtils.AppendMsg($"发生错误: {ex.Message}");
                 } finally {
                     // 确保资源释放
-                    fx5UModbusClient.WriteRegister(config.PlcFlagPos, 0);
+                    SetValueByResult(fx5UModbusClient, config.PlcFlagPos, failed);
                     fx5UModbusClient.Disconnect();
                     WidgetUtils.AppendMsg("PLC连接已断开...");
 
@@ -189,6 +200,14 @@ namespace STaTool.utils {
                     button_stop_fetch.Enabled = false;
                 }
             }, token); // 将 token 传递到最外层的 Task.Run
+        }
+
+        private void SetValueByResult(Fx5uModbusClient client, int pos, bool failed) {
+            if (!failed) {
+                client.WriteRegister(pos, (int) FinishType.OK);
+            } else {
+                client.WriteRegister(pos, (int) FinishType.ERROR);
+            }
         }
 
         private void ButtonStopFetch_Click(object? sender, EventArgs e) {
