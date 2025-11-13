@@ -4,10 +4,13 @@ using STaTool.plc;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using WindowsInput;
+using WindowsInput.Native;
 
 namespace STaTool.utils {
     public partial class ImageButtonClickerToolForm: Form {
         private ILog log;
+        private MainForm _mainForm;
 
         // 钩子句柄
         private IntPtr _hookID = IntPtr.Zero;
@@ -24,8 +27,13 @@ namespace STaTool.utils {
         private volatile bool _plcFlagDetected = false;
         private const int _checkDelay = 500;
 
-        public ImageButtonClickerToolForm(List<string> imageButtons, string plcIp, int plcPort, Action resetControls) {
+        public ImageButtonClickerToolForm(MainForm mainForm,
+                                          List<string> imageButtons,
+                                          string plcIp,
+                                          int plcPort,
+                                          Action resetControls) {
             log = LogManager.GetLogger(GetType());
+            _mainForm = mainForm;
 
             _proc = HookCallback;
             _hookID = SetHook(_proc);
@@ -104,19 +112,12 @@ namespace STaTool.utils {
             int clickInterval = int.Parse(clickIntervalStr);
             int checkInterval = int.Parse(checkIntervalStr);
 
-            // Update config
             Config config = FileUtil.LoadConfig();
-            config.RepeatTimes = repeatTimes;
-            config.ClickInterval = clickInterval;
-            config.CheckInterval = checkInterval;
-            FileUtil.SaveConfig(config);
-
-            button_start_fetch.Enabled = false;
-            button_stop_fetch.Enabled = true;
 
             _cts = new CancellationTokenSource();
             CancellationToken token = _cts.Token;
-            fetchingCurveData = true;
+
+            ActionsBeforeStarting(repeatTimes, clickInterval, checkInterval, config);
 
             Task.Run(async () => {
                 WidgetUtils.AppendMsg("开始自动抓取曲线数据...");
@@ -157,12 +158,20 @@ namespace STaTool.utils {
 
                                     string btnImg = FileUtil.GetImagePath(_imageButtons[i]);
                                     if (i == 1) {
-                                        clicker.ClickButtonByImage_Special(btnImg);
+                                        await clicker.ClickButtonByImage_Special(btnImg);
                                     } else {
-                                        bool found = clicker.ClickButtonByImage(btnImg);
-                                        if (i == 6 && !found) {
-                                            failed = true;
-                                            break;
+                                        bool found = await clicker.ClickButtonByImage(btnImg);
+                                        if (!found) { // 找不到按钮的逻辑处理
+                                            if (i == 4) { // “保存”按钮
+                                                SimulateAltS(clicker.InputSimulator);
+                                            } else if (i == 5) { // 是否替换的“是”按钮
+                                                SimulateAltY(clicker.InputSimulator);
+                                            } else if (i == 6) { // “确认”按钮
+                                                failed = true;
+                                                // 这是倒数第二个流程，最后一个是关闭导出窗口，
+                                                //  因此还是不 break 了，让它关掉，方便重试
+                                                // break; 
+                                            }
                                         }
                                     }
 
@@ -186,6 +195,7 @@ namespace STaTool.utils {
                 } catch (TaskCanceledException) {
                     WidgetUtils.AppendMsg("曲线抓取已取消。");
                 } catch (Exception ex) {
+                    failed = true;
                     log.Error($"曲线抓取过程中发生异常: {ex.Message}", ex);
                     WidgetUtils.AppendMsg($"发生错误: {ex.Message}");
                 } finally {
@@ -194,12 +204,50 @@ namespace STaTool.utils {
                     fx5UModbusClient.Disconnect();
                     WidgetUtils.AppendMsg("PLC连接已断开...");
 
-                    fetchingCurveData = false;
-
-                    button_start_fetch.Enabled = true;
-                    button_stop_fetch.Enabled = false;
+                    ActionsAfterStopping();
                 }
             }, token); // 将 token 传递到最外层的 Task.Run
+        }
+
+        // 模拟 Alt + S
+        private void SimulateAltS(InputSimulator inputSimulator) {
+            // 按下 Alt 键
+            // VirtualKeyCode.MENU 代表 Alt 键
+            inputSimulator.Keyboard.KeyDown(VirtualKeyCode.MENU);
+            // 按下 S 键
+            // KeyPress 自动处理按下和释放
+            inputSimulator.Keyboard.KeyPress(VirtualKeyCode.VK_S);
+            // 释放 Alt 键
+            inputSimulator.Keyboard.KeyUp(VirtualKeyCode.MENU);
+        }
+
+        // 模拟 Alt + Y
+        private void SimulateAltY(InputSimulator inputSimulator) {
+            // 按下 Alt 键
+            inputSimulator.Keyboard.KeyDown(VirtualKeyCode.MENU);
+            // 按下 Y 键
+            inputSimulator.Keyboard.KeyPress(VirtualKeyCode.VK_Y);
+            // 释放 Alt 键
+            inputSimulator.Keyboard.KeyUp(VirtualKeyCode.MENU);
+        }
+
+        private void ActionsBeforeStarting(int repeatTimes, int clickInterval, int checkInterval, Config config) {
+            // Update config
+            config.RepeatTimes = repeatTimes;
+            config.ClickInterval = clickInterval;
+            config.CheckInterval = checkInterval;
+            FileUtil.SaveConfig(config);
+
+            button_start_fetch.Enabled = false;
+            button_stop_fetch.Enabled = true;
+            textBox_repeat_times.Enabled = false;
+            textBox_click_interval.Enabled = false;
+            textBox_check_interval.Enabled = false;
+
+            fetchingCurveData = true;
+
+            // Minimize MainForm
+            _mainForm.WindowState = FormWindowState.Minimized;
         }
 
         private void SetValueByResult(Fx5uModbusClient client, int pos, bool failed) {
@@ -219,10 +267,20 @@ namespace STaTool.utils {
             log.Info("Stop fetching curve data...");
 
             _cts.Cancel();
+            ActionsAfterStopping();
+        }
+
+        private void ActionsAfterStopping() {
             fetchingCurveData = false;
 
             button_start_fetch.Enabled = true;
             button_stop_fetch.Enabled = false;
+            textBox_repeat_times.Enabled = true;
+            textBox_click_interval.Enabled = true;
+            textBox_check_interval.Enabled = true;
+
+            // Normalize MainForm
+            _mainForm.WindowState = FormWindowState.Normal;
         }
 
         // 设置钩子

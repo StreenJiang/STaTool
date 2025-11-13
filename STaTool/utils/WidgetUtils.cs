@@ -10,12 +10,14 @@ namespace STaTool.utils {
         }
 
         public static void AppendMsg(string msg) {
-            if (TextBox_realtime_log != null && TextBox_realtime_log.InvokeRequired) {
-                TextBox_realtime_log.BeginInvoke(() => 
-                    TextBox_realtime_log.AppendText($"{msg.Replace("\0", "")}\r\n")
-                );
-            } else {
-                TextBox_realtime_log?.AppendText($"{msg.Replace("\0", "")}\r\n");
+            if (TextBox_realtime_log != null && !TextBox_realtime_log.IsDisposed) {
+                if (TextBox_realtime_log.InvokeRequired) {
+                    TextBox_realtime_log.BeginInvoke(() =>
+                        TextBox_realtime_log.AppendText($"{msg.Replace("\0", "")}\r\n")
+                    );
+                } else {
+                    TextBox_realtime_log?.AppendText($"{msg.Replace("\0", "")}\r\n");
+                }
             }
         }
 
@@ -30,16 +32,16 @@ namespace STaTool.utils {
             }
         }
 
-        public static bool ShowConfirmPopUp(string message) 
+        public static bool ShowConfirmPopUp(string message)
             => MessageBox.Show(null, message, "请确认", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
 
-        public static DialogResult ShowNoticePopUp(string message) 
+        public static DialogResult ShowNoticePopUp(string message)
             => MessageBox.Show(null, message, "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-        public static DialogResult ShowWarningPopUp(string message) 
+        public static DialogResult ShowWarningPopUp(string message)
             => MessageBox.Show(null, message, "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
-        public static DialogResult ShowErrorPopUp(string message) 
+        public static DialogResult ShowErrorPopUp(string message)
             => MessageBox.Show(null, message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
     }

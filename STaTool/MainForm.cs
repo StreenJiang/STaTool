@@ -217,18 +217,28 @@ namespace STaTool {
                 textBox_storage_path.Enabled = false;
                 button_browse.Enabled = false;
 
-                // Save config
-                if (!config.Ip.Contains(ip) && !config.Port.Contains(port)) {
-                    config.Ip.Enqueue(ip);
-                    config.Port.Enqueue(port);
-                }
-                // Remove the oldest one if the queue is greater than 5
-                if (config.Ip.Count > 5) {
-                    config.Ip.Dequeue();
-                }
-                if (config.Port.Count > 5) {
-                    config.Port.Dequeue();
-                }
+                // --- 修正逻辑：移动当前IP和端口到队列首位 ---
+                // 1. 将队列转换为列表，方便操作
+                var ipList = new List<string>(config.Ip);
+                var portList = new List<int>(config.Port);
+
+                // 2. 从列表中移除当前IP和端口（如果存在）
+                ipList.Remove(ip);
+                portList.Remove(port);
+
+                // 3. 将当前IP和端口插入到列表开头
+                ipList.Insert(0, ip);
+                portList.Insert(0, port);
+
+                // 4. 重新创建队列并赋值给config
+                config.Ip = new Queue<string>(ipList);
+                config.Port = new Queue<int>(portList);
+
+                // 5. 限制队列大小（从队列末尾移除，即移除最旧的）
+                while (config.Ip.Count > 5) config.Ip.Dequeue();
+                while (config.Port.Count > 5) config.Port.Dequeue();
+                // --- 结束修正逻辑 ---
+
                 config.StoragePath = pathPrefix;
                 FileUtil.SaveConfig(config);
 
@@ -237,6 +247,9 @@ namespace STaTool {
                 comboBox_port.Items.Clear();
                 comboBox_ip.Items.AddRange(config.Ip.ToArray());
                 comboBox_port.Items.AddRange(config.Port.Cast<object>().ToArray());
+                // 设置第一个为选中项（即刚连接成功的）
+                if (comboBox_ip.Items.Count > 0) comboBox_ip.SelectedIndex = 0;
+                if (comboBox_port.Items.Count > 0) comboBox_port.SelectedIndex = 0; // 确保端口也同步更新
             } catch (Exception er) {
                 WidgetUtils.AppendMsg("连接出错，请联系管理员");
                 log.Warn($"Connect failed, e = {er}");
@@ -337,18 +350,28 @@ namespace STaTool {
             var flagPos = int.Parse(flagPosStr);
             var heartbeatPos = int.Parse(heartbeatPosStr);
 
-            // Save config
-            if (!config.PlcIp.Contains(ip) && !config.PlcPort.Contains(port)) {
-                config.PlcIp.Enqueue(ip);
-                config.PlcPort.Enqueue(port);
-            }
-            // Remove the oldest one if the queue is greater than 5
-            if (config.PlcIp.Count > 5) {
-                config.PlcIp.Dequeue();
-            }
-            if (config.PlcPort.Count > 5) {
-                config.PlcPort.Dequeue();
-            }
+            // --- 修正逻辑：移动当前PLC IP和端口到队列首位 ---
+            // 1. 将队列转换为列表，方便操作
+            var plcIpList = new List<string>(config.PlcIp);
+            var plcPortList = new List<int>(config.PlcPort);
+
+            // 2. 从列表中移除当前IP和端口（如果存在）
+            plcIpList.Remove(ip);
+            plcPortList.Remove(port);
+
+            // 3. 将当前IP和端口插入到列表开头
+            plcIpList.Insert(0, ip);
+            plcPortList.Insert(0, port);
+
+            // 4. 重新创建队列并赋值给config
+            config.PlcIp = new Queue<string>(plcIpList);
+            config.PlcPort = new Queue<int>(plcPortList);
+
+            // 5. 限制队列大小（从队列末尾移除，即移除最旧的）
+            while (config.PlcIp.Count > 5) config.PlcIp.Dequeue();
+            while (config.PlcPort.Count > 5) config.PlcPort.Dequeue();
+            // --- 结束修正逻辑 ---
+
             config.PlcFlagPos = flagPos;
             config.PlcHeartBeatPos = heartbeatPos;
             FileUtil.SaveConfig(config);
@@ -385,7 +408,7 @@ namespace STaTool {
                 okBtnImgName,
                 closeBtnImgName,
             };
-            var imageButtonClickerToolForm = new ImageButtonClickerToolForm(buttons, ip, port, () => {
+            var imageButtonClickerToolForm = new ImageButtonClickerToolForm(this, buttons, ip, port, () => {
                 fetchingCurveData = false;
 
                 button_capture_update_btn_img.Enabled = true;

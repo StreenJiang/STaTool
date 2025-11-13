@@ -93,14 +93,14 @@ namespace STaTool.tasks {
                 log.Info($"Task is stopped...");
 
                 await Task.Delay(RECEIVE_TIME_OUT);
-                if (socket != null) {
-                    try {
-                        // Send communication stop
-                        socket.Send(Encoding.ASCII.GetBytes(COMMUNICATION_STOP));
-                    } finally {
-                        socket.Close();
-                        socket = null;
-                    }
+                try {
+                    // Send communication stop
+                    socket?.Send(Encoding.ASCII.GetBytes(COMMUNICATION_STOP));
+                } catch (Exception ex) { // 捕获异常并赋值给变量 ex
+                    log.Info($"Send 'communication stop' fails. Error: {ex.Message}, Type: {ex.GetType().Name}");
+                } finally {
+                    socket?.Close();
+                    socket = null;
                 }
                 WidgetUtils.AppendMsg("连接已断开...");
             });

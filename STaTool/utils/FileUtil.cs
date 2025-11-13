@@ -5,8 +5,9 @@ using System.Drawing.Imaging;
 namespace STaTool.utils {
     public static class FileUtil {
         private static ILog log = LogManager.GetLogger(typeof(FileUtil));
-        private const string CONFIG_FILE_PATH = "config.json";
-        private const string IMAGE_DIRECTORY = "Button Images";
+        private static string basePath = AppDomain.CurrentDomain.BaseDirectory;
+        private static string CONFIG_FILE_PATH = Path.Combine(basePath, "config.json");
+        private static string IMAGE_DIRECTORY = Path.Combine(basePath, "Button Images");
 
         public static void SaveConfig(Config config) {
             string configJson = JsonConvert.SerializeObject(config);
