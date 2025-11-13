@@ -1,5 +1,6 @@
-﻿using log4net;
+using log4net;
 using OpenCvSharp;
+using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using WindowsInput;
@@ -9,8 +10,10 @@ namespace STaTool.utils {
     public class ImageRecognitionClicker {
         private ILog log;
         private readonly InputSimulator _inputSimulator = new InputSimulator();
+        private const int RETRY_DELAY = 200;
 
         public bool InitOk { get; set; } = true;
+        public InputSimulator InputSimulator => _inputSimulator;
 
         public ImageRecognitionClicker() {
             log = LogManager.GetLogger(GetType());
@@ -22,98 +25,122 @@ namespace STaTool.utils {
         /// <param name="templateImagePath">按钮模板图片路径(PNG)</param>
         /// <param name="threshold">匹配阈值(0-1)</param>
         /// <returns>是否成功点击</returns>
-        public bool ClickButtonByImage(string templateImagePath, double threshold = 0.9) {
-            try {
-                // 1. 截取屏幕并确保格式正确
-                using var screenCapture = CaptureScreen();
+        public async Task<bool> ClickButtonByImage(string templateImagePath, int timeout = 5000, double threshold = 0.9) {
+            var stopwatch = Stopwatch.StartNew(); // 启动高精度计时器
 
-                // 2. 加载模板图像并确保格式正确
-                using var templateImage = new Mat(templateImagePath, ImreadModes.Color);
-                if (templateImage.Empty()) {
-                    log.Warn($"Cannot load image template, template [{templateImagePath}] is null.");
-                    return false;
+            while (stopwatch.ElapsedMilliseconds < timeout) {
+                try {
+                    // 1. 截取屏幕并确保格式正确
+                    using var screenCapture = CaptureScreen();
+
+                    // 2. 加载模板图像并确保格式正确
+                    using var templateImage = new Mat(templateImagePath, ImreadModes.Color);
+                    if (templateImage.Empty()) {
+                        log.Warn($"Cannot load image template, template [{templateImagePath}] is null.");
+                        stopwatch.Stop(); // 计时结束
+                        return false; // 模板加载失败，直接返回，不重试
+                    }
+
+                    // 3. 转换为相同颜色空间
+                    using var screenMat = new Mat();
+                    if (screenCapture.Channels() == 3)
+                        Cv2.CvtColor(screenCapture, screenMat, ColorConversionCodes.BGR2BGRA);
+                    else
+                        screenCapture.CopyTo(screenMat);
+
+                    using var templateMat = new Mat();
+                    if (templateImage.Channels() == 3)
+                        Cv2.CvtColor(templateImage, templateMat, ColorConversionCodes.BGR2BGRA);
+                    else
+                        templateImage.CopyTo(templateMat);
+
+                    // 4. 图像匹配
+                    var matchResult = MatchTemplate(screenMat, templateMat, threshold);
+
+                    if (matchResult.IsMatchFound) {
+                        // 5. 计算中心坐标并点击
+                        var centerX = matchResult.Location.X + (templateMat.Width / 2);
+                        var centerY = matchResult.Location.Y + (templateMat.Height / 2);
+
+                        ClickAt(centerX, centerY);
+
+                        stopwatch.Stop(); // 计时结束
+                        return true; // 成功找到并点击，返回 true
+                    }
+                    // 如果匹配失败，继续循环重试
+                } catch (Exception ex) {
+                    // 记录异常，但不立即返回，继续重试直到超时
+                    log.Warn($"Attempt to match button with image template [{templateImagePath}] failed at {DateTime.Now:HH:mm:ss.fff}. Error: {ex.Message}");
+                    // 注意：这里没有 return false，而是继续循环
                 }
 
-                // 3. 转换为相同颜色空间
-                using var screenMat = new Mat();
-                if (screenCapture.Channels() == 3)
-                    Cv2.CvtColor(screenCapture, screenMat, ColorConversionCodes.BGR2BGRA);
-                else
-                    screenCapture.CopyTo(screenMat);
-
-                using var templateMat = new Mat();
-                if (templateImage.Channels() == 3)
-                    Cv2.CvtColor(templateImage, templateMat, ColorConversionCodes.BGR2BGRA);
-                else
-                    templateImage.CopyTo(templateMat);
-
-                // 4. 图像匹配
-                var matchResult = MatchTemplate(screenMat, templateMat, threshold);
-
-                if (!matchResult.IsMatchFound) {
-                    log.Warn($"Cannot find matched button with image template [{templateImagePath}].");
-                    return false;
-                }
-
-                // 5. 计算中心坐标并点击
-                var centerX = matchResult.Location.X + (templateMat.Width / 2);
-                var centerY = matchResult.Location.Y + (templateMat.Height / 2);
-
-                ClickAt(centerX, centerY);
-
-                return true;
-            } catch (Exception ex) {
-                WidgetUtils.ShowErrorPopUp($"图像【{templateImagePath}】识别点击失败: {ex.Message}");
-                log.Error($"Matching button with image tempalte [{templateImagePath}] failed.", ex);
-                return false;
+                // 每次尝试失败后，等待一会再进行下一次尝试 (非阻塞)
+                await Task.Delay(RETRY_DELAY);
             }
+
+            stopwatch.Stop(); // 计时结束
+                              // 如果超时仍未找到，记录警告并返回 false
+            log.Warn($"Cannot find matched button with image template [{templateImagePath}] within {timeout}ms.");
+            return false;
         }
 
-        public bool ClickButtonByImage_Special(string templateImagePath, double threshold = 0.9) {
-            try {
-                // 1. 截取屏幕并确保格式正确
-                using var screenCapture = CaptureScreen();
+        public async Task<bool> ClickButtonByImage_Special(string templateImagePath, int timeout = 5000, double threshold = 0.9) {
+            var stopwatch = Stopwatch.StartNew(); // 启动高精度计时器
 
-                // 2. 加载模板图像并确保格式正确
-                using var templateImage = new Mat(templateImagePath, ImreadModes.Color);
-                if (templateImage.Empty()) {
-                    log.Warn($"Cannot load image template, template [{templateImagePath}] is null.");
-                    return false;
+            while (stopwatch.ElapsedMilliseconds < timeout) {
+                try {
+                    // 1. 截取屏幕并确保格式正确
+                    using var screenCapture = CaptureScreen();
+
+                    // 2. 加载模板图像并确保格式正确
+                    using var templateImage = new Mat(templateImagePath, ImreadModes.Color);
+                    if (templateImage.Empty()) {
+                        log.Warn($"Cannot load image template, template [{templateImagePath}] is null.");
+                        stopwatch.Stop(); // 计时结束
+                        return false; // 模板加载失败，直接返回，不重试
+                    }
+
+                    // 3. 转换为相同颜色空间
+                    using var screenMat = new Mat();
+                    if (screenCapture.Channels() == 3)
+                        Cv2.CvtColor(screenCapture, screenMat, ColorConversionCodes.BGR2BGRA);
+                    else
+                        screenCapture.CopyTo(screenMat);
+
+                    using var templateMat = new Mat();
+                    if (templateImage.Channels() == 3)
+                        Cv2.CvtColor(templateImage, templateMat, ColorConversionCodes.BGR2BGRA);
+                    else
+                        templateImage.CopyTo(templateMat);
+
+                    // 4. 图像匹配
+                    var matchResult = MatchTemplate(screenMat, templateMat, threshold);
+
+                    if (matchResult.IsMatchFound) {
+                        // 5. 计算中心坐标并点击
+                        var centerX = matchResult.Location.X + (templateMat.Width / 2);
+                        var centerY = matchResult.Location.Y + (int) Math.Abs((templateMat.Height * 1.5));
+
+                        ClickAt(centerX, centerY);
+
+                        stopwatch.Stop(); // 计时结束
+                        return true; // 成功找到并点击，返回 true
+                    }
+                    // 如果匹配失败，继续循环重试
+                } catch (Exception ex) {
+                    // 记录异常，但不立即返回，继续重试直到超时
+                    log.Warn($"Attempt to match button with image template [{templateImagePath}] failed at {DateTime.Now:HH:mm:ss.fff}. Error: {ex.Message}");
+                    // 注意：这里没有 return false，而是继续循环
                 }
 
-                // 3. 转换为相同颜色空间
-                using var screenMat = new Mat();
-                if (screenCapture.Channels() == 3)
-                    Cv2.CvtColor(screenCapture, screenMat, ColorConversionCodes.BGR2BGRA);
-                else
-                    screenCapture.CopyTo(screenMat);
-
-                using var templateMat = new Mat();
-                if (templateImage.Channels() == 3)
-                    Cv2.CvtColor(templateImage, templateMat, ColorConversionCodes.BGR2BGRA);
-                else
-                    templateImage.CopyTo(templateMat);
-
-                // 4. 图像匹配
-                var matchResult = MatchTemplate(screenMat, templateMat, threshold);
-
-                if (!matchResult.IsMatchFound) {
-                    log.Warn($"Cannot find matched button with image template [{templateImagePath}].");
-                    return false;
-                }
-
-                // 5. 计算中心坐标并点击
-                var centerX = matchResult.Location.X + (templateMat.Width / 2);
-                var centerY = matchResult.Location.Y + (int) Math.Abs((templateMat.Height * 1.5));
-
-                ClickAt(centerX, centerY);
-
-                return true;
-            } catch (Exception ex) {
-                WidgetUtils.ShowErrorPopUp($"图像【{templateImagePath}】识别点击失败: {ex.Message}");
-                log.Error($"Matching button with image tempalte [{templateImagePath}] failed.", ex);
-                return false;
+                // 每次尝试失败后，等待一会再进行下一次尝试 (非阻塞)
+                await Task.Delay(RETRY_DELAY);
             }
+
+            stopwatch.Stop(); // 计时结束
+                              // 如果超时仍未找到，记录警告并返回 false
+            log.Warn($"Cannot find matched button with image template [{templateImagePath}] within {timeout}ms.");
+            return false;
         }
 
         /// <summary>
