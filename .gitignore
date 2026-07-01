@@ -364,3 +364,9 @@ FodyWeavers.xsd
 
 # Custom config file
 config.json
+
+# CodeGraph index
+.codegraph/
+
+# Cursor IDE rules
+.cursor/
