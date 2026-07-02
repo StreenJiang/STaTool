@@ -7,8 +7,6 @@ namespace STaTool.utils {
         public Queue<string> ExportBtnImg { get; set; } = new Queue<string>();
         public Queue<string> BlmBtnImg { get; set; } = new Queue<string>();
         public Queue<string> SaveBtnImg { get; set; } = new Queue<string>();
-        public Queue<string> YesBtnImg { get; set; } = new Queue<string>();
-        public Queue<string> OkBtnImg { get; set; } = new Queue<string>();
         public Queue<string> CloseBtnImg { get; set; } = new Queue<string>();
         public Queue<string> PlcIp { get; set; } = new Queue<string>();
         public Queue<int> PlcPort { get; set; } = new Queue<int>();
@@ -18,6 +16,7 @@ namespace STaTool.utils {
         public int ClickInterval { get; set; } = 0;
         public int CheckInterval { get; set; } = 0;
         public string StoragePath { get; set; } = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tightening data");
+        public string CurveStoragePath { get; set; } = "";
         public bool AutoStartup { get; set; } = false;
         public bool AutoStartFetch { get; set; } = false;
     }

@@ -24,13 +24,13 @@ namespace STaTool.utils {
 
         private string _plcIp;
         private int _plcPort;
+        private string _curveStoragePath;
         private volatile bool _plcFlagDetected = false;
         private const int _checkDelay = 500;
 
         public ImageButtonClickerToolForm(MainForm mainForm,
                                           List<string> imageButtons,
-                                          string plcIp,
-                                          int plcPort,
+                                          FetchConfig fetchConfig,
                                           Action resetControls) {
             log = LogManager.GetLogger(GetType());
             _mainForm = mainForm;
@@ -54,8 +54,9 @@ namespace STaTool.utils {
             }
 
             _imageButtons = imageButtons;
-            _plcIp = plcIp;
-            _plcPort = plcPort;
+            _plcIp = fetchConfig.PlcIp;
+            _plcPort = fetchConfig.PlcPort;
+            _curveStoragePath = fetchConfig.CurveStoragePath;
             _resetControls = resetControls;
 
             button_start_fetch.Click += ButtonStartFetch_Click;
@@ -131,7 +132,6 @@ namespace STaTool.utils {
                     return;
                 }
 
-                bool failed = false;
                 try {
                     // 启动 PLC 轮询服务
                     _ = plcService.StartPollingAsync(
@@ -149,45 +149,65 @@ namespace STaTool.utils {
                     // 主循环
                     while (!token.IsCancellationRequested) {
                         if (_plcFlagDetected) {
-                            int count = 0;
-                            failed = false;
-
-                            while (count < repeatTimes && !token.IsCancellationRequested) {
-                                for (int i = 0; i < _imageButtons.Count; i++) {
-                                    token.ThrowIfCancellationRequested();
-
-                                    string btnImg = FileUtil.GetImagePath(_imageButtons[i]);
-                                    if (i == 1) {
-                                        await clicker.ClickButtonByImage_Special(btnImg);
-                                    } else {
-                                        bool found = await clicker.ClickButtonByImage(btnImg);
-                                        if (!found) { // 找不到按钮的逻辑处理
-                                            if (i == 4) { // “保存”按钮
-                                                SimulateAltS(clicker.InputSimulator);
-                                            } else if (i == 5) { // 是否替换的“是”按钮
-                                                SimulateAltY(clicker.InputSimulator);
-                                            } else if (i == 6) { // “确认”按钮
-                                                failed = true;
-                                                // 这是倒数第二个流程，最后一个是关闭导出窗口，
-                                                //  因此还是不 break 了，让它关掉，方便重试
-                                                // break; 
-                                            }
+                            // 删除曲线文件（不存在则跳过）
+                            bool deleteFailed = false;
+                            if (!string.IsNullOrEmpty(_curveStoragePath)) {
+                                string[] curveFiles = { "Curves graph_ang.crv", "Curves graph.crv" };
+                                foreach (var file in curveFiles) {
+                                    string filePath = Path.Combine(_curveStoragePath, file);
+                                    try {
+                                        if (File.Exists(filePath)) {
+                                            File.Delete(filePath);
+                                            WidgetUtils.AppendMsg($"已删除曲线文件: {file}");
                                         }
+                                    } catch (Exception ex) {
+                                        deleteFailed = true;
+                                        log.Warn($"删除曲线文件失败: {filePath}", ex);
+                                        WidgetUtils.ShowWarningPopUp(
+                                            $"曲线文件被占用，无法删除！\n\n" +
+                                            $"文件: {file}\n" +
+                                            $"路径: {_curveStoragePath}\n\n" +
+                                            $"请手动关闭占用该文件的程序后重试。");
+                                        break;
                                     }
-
-                                    await Task.Delay(clickInterval, token);
-                                }
-
-                                count++;
-                                WidgetUtils.AppendMsg($"第 {count} 次曲线抓取完毕，结果：{(failed ? "抓取失败" : "抓取成功")}");
-                                if (!failed) {
-                                    break;
                                 }
                             }
 
-                            // 重置 PLC 标志位
-                            SetValueByResult(fx5UModbusClient, config.PlcFlagPos, failed);
-                            WidgetUtils.AppendMsg("曲线抓取完成。已重置PLC标识。");
+                            if (deleteFailed) {
+                                // 向 PLC 报错，跳过本轮
+                                SetValueByResult(fx5UModbusClient, config.PlcFlagPos, true);
+                                WidgetUtils.AppendMsg("曲线文件删除失败，已跳过本轮抓取。");
+                            } else {
+                                int count = 0;
+
+                                while (count < repeatTimes && !token.IsCancellationRequested) {
+                                    for (int i = 0; i < _imageButtons.Count; i++) {
+                                        token.ThrowIfCancellationRequested();
+
+                                        string btnImg = FileUtil.GetImagePath(_imageButtons[i]);
+                                        if (i == 1) {
+                                            await clicker.ClickButtonByImage_Special(btnImg);
+                                        } else {
+                                            bool found = await clicker.ClickButtonByImage(btnImg);
+                                            if (!found) { // 找不到按钮的逻辑处理
+                                                if (i == 4) { // "保存"按钮
+                                                    SimulateAltS(clicker.InputSimulator);
+                                                }
+                                            }
+                                        }
+
+                                        await Task.Delay(clickInterval, token);
+                                    }
+
+                                    count++;
+                                    WidgetUtils.AppendMsg($"第 {count} 次曲线抓取完毕，结果：抓取成功");
+                                    break;
+                                }
+
+                                // 重置 PLC 标志位
+                                SetValueByResult(fx5UModbusClient, config.PlcFlagPos, false);
+                                WidgetUtils.AppendMsg("曲线抓取完成。已重置PLC标识。");
+                            }
                         }
 
                         await Task.Delay(_checkDelay, token);
@@ -195,12 +215,11 @@ namespace STaTool.utils {
                 } catch (TaskCanceledException) {
                     WidgetUtils.AppendMsg("曲线抓取已取消。");
                 } catch (Exception ex) {
-                    failed = true;
                     log.Error($"曲线抓取过程中发生异常: {ex.Message}", ex);
                     WidgetUtils.AppendMsg($"发生错误: {ex.Message}");
+                    SetValueByResult(fx5UModbusClient, config.PlcFlagPos, true);
                 } finally {
                     // 确保资源释放
-                    SetValueByResult(fx5UModbusClient, config.PlcFlagPos, failed);
                     fx5UModbusClient.Disconnect();
                     WidgetUtils.AppendMsg("PLC连接已断开...");
 
@@ -217,16 +236,6 @@ namespace STaTool.utils {
             // 按下 S 键
             // KeyPress 自动处理按下和释放
             inputSimulator.Keyboard.KeyPress(VirtualKeyCode.VK_S);
-            // 释放 Alt 键
-            inputSimulator.Keyboard.KeyUp(VirtualKeyCode.MENU);
-        }
-
-        // 模拟 Alt + Y
-        private void SimulateAltY(InputSimulator inputSimulator) {
-            // 按下 Alt 键
-            inputSimulator.Keyboard.KeyDown(VirtualKeyCode.MENU);
-            // 按下 Y 键
-            inputSimulator.Keyboard.KeyPress(VirtualKeyCode.VK_Y);
             // 释放 Alt 键
             inputSimulator.Keyboard.KeyUp(VirtualKeyCode.MENU);
         }

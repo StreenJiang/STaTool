@@ -50,8 +50,6 @@ namespace STaTool {
             _loadImages(config.ExportBtnImg, comboBox_export_btn_img, "导出按钮图片");
             _loadImages(config.BlmBtnImg, comboBox_blm_btn_img, "BLM按钮图片");
             _loadImages(config.SaveBtnImg, comboBox_save_btn_img, "保存按钮图片");
-            _loadImages(config.YesBtnImg, comboBox_yes_btn_img, "是否替换按钮图片");
-            _loadImages(config.OkBtnImg, comboBox_ok_btn_img, "确认按钮图片");
             _loadImages(config.CloseBtnImg, comboBox_close_btn_img, "关闭按钮图片");
 
             void _loadImages(Queue<string> queue, ComboBox box, string defaultName) {
@@ -108,6 +106,10 @@ namespace STaTool {
                 textBox_storage_path.Text = config.StoragePath;
             }
 
+            if (!string.IsNullOrEmpty(config.CurveStoragePath)) {
+                textBox_curve_storage_path.Text = config.CurveStoragePath;
+            }
+
             // Add event listener
             comboBox_ip.SelectedIndexChanged += ComboBox_Ip_SelectedIndexChanged;
             button_connect.Click += ButtonConnect_Click;
@@ -115,6 +117,7 @@ namespace STaTool {
             button_start_fetch.Click += ButtonStartFetch_Click;
             button_clear_log.Click += ButtonClearLog_Click;
             button_browse.Click += ButtonBrowse_Click;
+            button_browse_curve.Click += ButtonBrowseCurve_Click;
             checkBox_auto_startup.CheckedChanged += CheckBoxAutoStartup_CheckedChanged;
             checkBox_auto_fetch.CheckedChanged += CheckBoxAutoFetch_CheckedChanged;
 
@@ -128,10 +131,6 @@ namespace STaTool {
                 => ButtonCaptureBtnImage_Click(comboBox_blm_btn_img, "BLM按钮", cfg => cfg.BlmBtnImg);
             button_save_btn_img.Click += (s, e)
                 => ButtonCaptureBtnImage_Click(comboBox_save_btn_img, "保存按钮", cfg => cfg.SaveBtnImg);
-            button_yes_btn_img.Click += (s, e)
-                => ButtonCaptureBtnImage_Click(comboBox_yes_btn_img, "是否替换按钮", cfg => cfg.YesBtnImg);
-            button_ok_btn_img.Click += (s, e)
-                => ButtonCaptureBtnImage_Click(comboBox_ok_btn_img, "确认按钮", cfg => cfg.OkBtnImg);
             button_close_btn_img.Click += (s, e)
                 => ButtonCaptureBtnImage_Click(comboBox_close_btn_img, "关闭按钮", cfg => cfg.CloseBtnImg);
 
@@ -269,6 +268,8 @@ namespace STaTool {
             if (!fetchingCurveData) {
                 button_browse.Enabled = true;
                 textBox_storage_path.Enabled = true;
+                button_browse_curve.Enabled = true;
+                textBox_curve_storage_path.Enabled = true;
             }
         }
 
@@ -304,18 +305,28 @@ namespace STaTool {
         }
 
         private void ButtonStartFetch_Click(object? sender, EventArgs e) {
+            // 曲线数据存储路径校验（在打开子窗口之前）
+            string curveStoragePath = textBox_curve_storage_path.Text;
+            if (string.IsNullOrWhiteSpace(curveStoragePath)) {
+                WidgetUtils.ShowWarningPopUp("请先选择曲线数据存储路径！");
+                return;
+            }
+            if (!FileUtil.IsPathValid(curveStoragePath)) {
+                WidgetUtils.SetError(textBox_curve_storage_path, "请输入正确的曲线数据存储路径");
+                return;
+            } else {
+                WidgetUtils.SetError(textBox_curve_storage_path, "");
+            }
+
             string updateBtnImgName = comboBox_update_btn_img.Text;
             string crvHeaderImgName = comboBox_crv_header_img.Text;
             string exportBtnImgName = comboBox_export_btn_img.Text;
             string blmBtnImgName = comboBox_blm_btn_img.Text;
             string saveBtnImgName = comboBox_save_btn_img.Text;
-            string yesBtnImgName = comboBox_yes_btn_img.Text;
-            string okBtnImgName = comboBox_ok_btn_img.Text;
             string closeBtnImgName = comboBox_close_btn_img.Text;
             if (string.IsNullOrWhiteSpace(updateBtnImgName) || string.IsNullOrWhiteSpace(crvHeaderImgName)
                 || string.IsNullOrWhiteSpace(exportBtnImgName) || string.IsNullOrWhiteSpace(blmBtnImgName)
-                || string.IsNullOrWhiteSpace(saveBtnImgName) || string.IsNullOrWhiteSpace(yesBtnImgName)
-                || string.IsNullOrWhiteSpace(okBtnImgName) || string.IsNullOrWhiteSpace(closeBtnImgName)
+                || string.IsNullOrWhiteSpace(saveBtnImgName) || string.IsNullOrWhiteSpace(closeBtnImgName)
                 ) {
                 WidgetUtils.ShowWarningPopUp("请先选择所有按钮的图片！");
                 return;
@@ -351,29 +362,25 @@ namespace STaTool {
             var heartbeatPos = int.Parse(heartbeatPosStr);
 
             // --- 修正逻辑：移动当前PLC IP和端口到队列首位 ---
-            // 1. 将队列转换为列表，方便操作
             var plcIpList = new List<string>(config.PlcIp);
             var plcPortList = new List<int>(config.PlcPort);
 
-            // 2. 从列表中移除当前IP和端口（如果存在）
             plcIpList.Remove(ip);
             plcPortList.Remove(port);
 
-            // 3. 将当前IP和端口插入到列表开头
             plcIpList.Insert(0, ip);
             plcPortList.Insert(0, port);
 
-            // 4. 重新创建队列并赋值给config
             config.PlcIp = new Queue<string>(plcIpList);
             config.PlcPort = new Queue<int>(plcPortList);
 
-            // 5. 限制队列大小（从队列末尾移除，即移除最旧的）
             while (config.PlcIp.Count > 5) config.PlcIp.Dequeue();
             while (config.PlcPort.Count > 5) config.PlcPort.Dequeue();
             // --- 结束修正逻辑 ---
 
             config.PlcFlagPos = flagPos;
             config.PlcHeartBeatPos = heartbeatPos;
+            config.CurveStoragePath = curveStoragePath;
             FileUtil.SaveConfig(config);
 
             button_capture_update_btn_img.Enabled = false;
@@ -381,20 +388,18 @@ namespace STaTool {
             button_export_btn_img.Enabled = false;
             button_blm_btn_img.Enabled = false;
             button_save_btn_img.Enabled = false;
-            button_yes_btn_img.Enabled = false;
-            button_ok_btn_img.Enabled = false;
             button_close_btn_img.Enabled = false;
             comboBox_update_btn_img.Enabled = false;
             comboBox_crv_header_img.Enabled = false;
             comboBox_export_btn_img.Enabled = false;
             comboBox_blm_btn_img.Enabled = false;
             comboBox_save_btn_img.Enabled = false;
-            comboBox_yes_btn_img.Enabled = false;
-            comboBox_ok_btn_img.Enabled = false;
             comboBox_close_btn_img.Enabled = false;
             comboBox_plc_ip.Enabled = false;
             comboBox_plc_port.Enabled = false;
             button_start_fetch.Enabled = false;
+            textBox_curve_storage_path.Enabled = false;
+            button_browse_curve.Enabled = false;
 
             fetchingCurveData = true;
 
@@ -404,11 +409,16 @@ namespace STaTool {
                 exportBtnImgName,
                 blmBtnImgName,
                 saveBtnImgName,
-                yesBtnImgName,
-                okBtnImgName,
                 closeBtnImgName,
             };
-            var imageButtonClickerToolForm = new ImageButtonClickerToolForm(this, buttons, ip, port, () => {
+
+            var fetchConfig = new FetchConfig {
+                PlcIp = ip,
+                PlcPort = port,
+                CurveStoragePath = curveStoragePath,
+            };
+
+            var imageButtonClickerToolForm = new ImageButtonClickerToolForm(this, buttons, fetchConfig, () => {
                 fetchingCurveData = false;
 
                 button_capture_update_btn_img.Enabled = true;
@@ -416,22 +426,44 @@ namespace STaTool {
                 button_export_btn_img.Enabled = true;
                 button_blm_btn_img.Enabled = true;
                 button_save_btn_img.Enabled = true;
-                button_yes_btn_img.Enabled = true;
-                button_ok_btn_img.Enabled = true;
                 button_close_btn_img.Enabled = true;
                 comboBox_update_btn_img.Enabled = true;
                 comboBox_crv_header_img.Enabled = true;
                 comboBox_export_btn_img.Enabled = true;
                 comboBox_blm_btn_img.Enabled = true;
                 comboBox_save_btn_img.Enabled = true;
-                comboBox_yes_btn_img.Enabled = true;
-                comboBox_ok_btn_img.Enabled = true;
                 comboBox_close_btn_img.Enabled = true;
                 comboBox_plc_ip.Enabled = true;
                 comboBox_plc_port.Enabled = true;
                 button_start_fetch.Enabled = true;
+                textBox_curve_storage_path.Enabled = true;
+                button_browse_curve.Enabled = true;
             });
             imageButtonClickerToolForm.Show();
+        }
+
+        private void ButtonBrowseCurve_Click(object? sender, EventArgs e) {
+            using var folderDialog = new FolderBrowserDialog();
+            folderDialog.ShowNewFolderButton = true;
+            if (!string.IsNullOrEmpty(textBox_curve_storage_path.Text)
+                    && !string.IsNullOrWhiteSpace(textBox_curve_storage_path.Text)) {
+                folderDialog.SelectedPath = textBox_curve_storage_path.Text;
+            }
+
+            folderDialog.Description = "请选择曲线文件存储文件夹";
+
+            if (folderDialog.ShowDialog() == DialogResult.OK) {
+                string selectedFolderPath = folderDialog.SelectedPath;
+
+                if (!FileUtil.IsPathValid(selectedFolderPath)) {
+                    WidgetUtils.SetError(textBox_curve_storage_path, "请输入正确的路径");
+                    return;
+                } else {
+                    WidgetUtils.SetError(textBox_curve_storage_path, "");
+                }
+
+                textBox_curve_storage_path.Text = selectedFolderPath;
+            }
         }
 
         private void ButtonClearLog_Click(object? sender, EventArgs e) {
@@ -518,8 +550,6 @@ namespace STaTool {
                     string.IsNullOrWhiteSpace(comboBox_export_btn_img.Text) ||
                     string.IsNullOrWhiteSpace(comboBox_blm_btn_img.Text) ||
                     string.IsNullOrWhiteSpace(comboBox_save_btn_img.Text) ||
-                    string.IsNullOrWhiteSpace(comboBox_yes_btn_img.Text) ||
-                    string.IsNullOrWhiteSpace(comboBox_ok_btn_img.Text) ||
                     string.IsNullOrWhiteSpace(comboBox_close_btn_img.Text)) {
                     WidgetUtils.AppendMsg("❌ 自动抓取失败：请先配置所有按钮图片");
                     return;
