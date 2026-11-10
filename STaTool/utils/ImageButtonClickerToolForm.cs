@@ -149,28 +149,60 @@ namespace STaTool.utils {
                     // 主循环
                     while (!token.IsCancellationRequested) {
                         if (_plcFlagDetected) {
-                            // 删除曲线文件（不存在则跳过）
                             bool deleteFailed = false;
-                            if (!string.IsNullOrEmpty(_curveStoragePath)) {
-                                string[] curveFiles = { "Curves graph_ang.crv", "Curves graph.crv" };
-                                foreach (var file in curveFiles) {
-                                    string filePath = Path.Combine(_curveStoragePath, file);
-                                    try {
-                                        if (File.Exists(filePath)) {
-                                            File.Delete(filePath);
-                                            WidgetUtils.AppendMsg($"已删除曲线文件: {file}");
+                            int count = 0;
+
+                            while (count < repeatTimes && !token.IsCancellationRequested) {
+                                for (int i = 0; i < _imageButtons.Count; i++) {
+                                    token.ThrowIfCancellationRequested();
+
+                                    // 点击"保存"前一步删除曲线文件（不存在则跳过）
+                                    if (i == 4 && !string.IsNullOrEmpty(_curveStoragePath)) {
+                                        string[] curveFiles = { "Curves graph_ang.crv", "Curves graph.crv" };
+                                        foreach (var file in curveFiles) {
+                                            string filePath = Path.Combine(_curveStoragePath, file);
+                                            try {
+                                                if (File.Exists(filePath)) {
+                                                    File.Delete(filePath);
+                                                    WidgetUtils.AppendMsg($"已删除曲线文件: {file}");
+                                                }
+                                            } catch (Exception ex) {
+                                                deleteFailed = true;
+                                                log.Warn($"删除曲线文件失败: {filePath}", ex);
+                                                WidgetUtils.ShowWarningPopUp(
+                                                    $"曲线文件被占用，无法删除！\n\n" +
+                                                    $"文件: {file}\n" +
+                                                    $"路径: {_curveStoragePath}\n\n" +
+                                                    $"请手动关闭占用该文件的程序后重试。");
+                                                break;
+                                            }
                                         }
-                                    } catch (Exception ex) {
-                                        deleteFailed = true;
-                                        log.Warn($"删除曲线文件失败: {filePath}", ex);
-                                        WidgetUtils.ShowWarningPopUp(
-                                            $"曲线文件被占用，无法删除！\n\n" +
-                                            $"文件: {file}\n" +
-                                            $"路径: {_curveStoragePath}\n\n" +
-                                            $"请手动关闭占用该文件的程序后重试。");
+                                    }
+
+                                    if (deleteFailed) {
                                         break;
                                     }
+
+                                    string btnImg = FileUtil.GetImagePath(_imageButtons[i]);
+                                    if (i == 1) {
+                                        await clicker.ClickButtonByImage_Special(btnImg);
+                                    } else {
+                                        bool found = await clicker.ClickButtonByImage(btnImg);
+                                        if (!found) { // 找不到按钮的逻辑处理
+                                            if (i == 4) { // "保存"按钮
+                                                SimulateAltS(clicker.InputSimulator);
+                                            }
+                                        }
+                                    }
+
+                                    await Task.Delay(clickInterval, token);
                                 }
+
+                                if (!deleteFailed) {
+                                    count++;
+                                    WidgetUtils.AppendMsg($"第 {count} 次曲线抓取完毕，结果：抓取成功");
+                                }
+                                break;
                             }
 
                             if (deleteFailed) {
@@ -178,32 +210,6 @@ namespace STaTool.utils {
                                 SetValueByResult(fx5UModbusClient, config.PlcFlagPos, true);
                                 WidgetUtils.AppendMsg("曲线文件删除失败，已跳过本轮抓取。");
                             } else {
-                                int count = 0;
-
-                                while (count < repeatTimes && !token.IsCancellationRequested) {
-                                    for (int i = 0; i < _imageButtons.Count; i++) {
-                                        token.ThrowIfCancellationRequested();
-
-                                        string btnImg = FileUtil.GetImagePath(_imageButtons[i]);
-                                        if (i == 1) {
-                                            await clicker.ClickButtonByImage_Special(btnImg);
-                                        } else {
-                                            bool found = await clicker.ClickButtonByImage(btnImg);
-                                            if (!found) { // 找不到按钮的逻辑处理
-                                                if (i == 4) { // "保存"按钮
-                                                    SimulateAltS(clicker.InputSimulator);
-                                                }
-                                            }
-                                        }
-
-                                        await Task.Delay(clickInterval, token);
-                                    }
-
-                                    count++;
-                                    WidgetUtils.AppendMsg($"第 {count} 次曲线抓取完毕，结果：抓取成功");
-                                    break;
-                                }
-
                                 // 重置 PLC 标志位
                                 SetValueByResult(fx5UModbusClient, config.PlcFlagPos, false);
                                 WidgetUtils.AppendMsg("曲线抓取完成。已重置PLC标识。");

@@ -155,7 +155,21 @@ namespace STaTool {
 
         protected override void OnShown(EventArgs e) {
             base.OnShown(e);
-            // 以当前（已按 DPI 缩放）的设计尺寸作为最小尺寸，避免缩小后控件重叠
+
+            // 按 DPI 缩放后窗口可能比屏幕还宽（高度却放得下）。若不处理，
+            // 下面的 MinimumSize 会把窗口锁在超屏宽度上，右侧控件（如“浏览”按钮）
+            // 会一直留在屏幕外且无法缩窄找回。这里先收敛到工作区内并重新居中。
+            Rectangle workingArea = Screen.FromControl(this).WorkingArea;
+            if (Width > workingArea.Width || Height > workingArea.Height) {
+                Size = new Size(
+                    Math.Min(Width, workingArea.Width),
+                    Math.Min(Height, workingArea.Height));
+                Location = new Point(
+                    workingArea.Left + (workingArea.Width - Width) / 2,
+                    workingArea.Top + (workingArea.Height - Height) / 2);
+            }
+
+            // 以当前（已按 DPI 缩放并对屏幕收缩后的）尺寸作为最小尺寸，避免缩小后控件重叠
             MinimumSize = Size;
         }
 
