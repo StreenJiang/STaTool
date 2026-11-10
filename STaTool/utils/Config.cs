@@ -7,6 +7,7 @@ namespace STaTool.utils {
         public Queue<string> ExportBtnImg { get; set; } = new Queue<string>();
         public Queue<string> BlmBtnImg { get; set; } = new Queue<string>();
         public Queue<string> SaveBtnImg { get; set; } = new Queue<string>();
+        public Queue<string> OkBtnImg { get; set; } = new Queue<string>();
         public Queue<string> CloseBtnImg { get; set; } = new Queue<string>();
         public Queue<string> PlcIp { get; set; } = new Queue<string>();
         public Queue<int> PlcPort { get; set; } = new Queue<int>();

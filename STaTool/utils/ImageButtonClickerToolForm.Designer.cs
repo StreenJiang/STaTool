@@ -145,8 +145,8 @@
             // 
             // ImageButtonClickerToolForm
             // 
-            AutoScaleDimensions = new SizeF(11F, 24F);
-            AutoScaleMode = AutoScaleMode.Font;
+            AutoScaleDimensions = new SizeF(144F, 144F);
+            AutoScaleMode = AutoScaleMode.Dpi;
             ClientSize = new Size(405, 271);
             Controls.Add(textBox_check_interval);
             Controls.Add(textBox_click_interval);

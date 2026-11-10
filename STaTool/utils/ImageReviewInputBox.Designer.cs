@@ -80,8 +80,8 @@
             // 
             // ImageReviewInputBox
             // 
-            AutoScaleDimensions = new SizeF(11F, 24F);
-            AutoScaleMode = AutoScaleMode.Font;
+            AutoScaleDimensions = new SizeF(144F, 144F);
+            AutoScaleMode = AutoScaleMode.Dpi;
             ClientSize = new Size(482, 261);
             Controls.Add(button_cancel);
             Controls.Add(button_save);
