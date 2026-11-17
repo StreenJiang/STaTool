@@ -159,7 +159,7 @@ namespace STaTool {
             // 
             groupBox_realtime_log.Controls.Add(button_clear_log);
             groupBox_realtime_log.Controls.Add(textBox_realtime_log);
-            groupBox_realtime_log.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            groupBox_realtime_log.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             groupBox_realtime_log.Location = new Point(831, 300);
             groupBox_realtime_log.Name = "groupBox_realtime_log";
             groupBox_realtime_log.Size = new Size(805, 397);
@@ -199,7 +199,7 @@ namespace STaTool {
             groupBox_storage_settings.Controls.Add(button_browse);
             groupBox_storage_settings.Controls.Add(textBox_storage_path);
             groupBox_storage_settings.Controls.Add(label_storage_path);
-            groupBox_storage_settings.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            groupBox_storage_settings.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             groupBox_storage_settings.Location = new Point(831, 100);
             groupBox_storage_settings.Name = "groupBox_storage_settings";
             groupBox_storage_settings.Size = new Size(805, 192);
@@ -612,7 +612,7 @@ namespace STaTool {
             // 
             groupBox1.Controls.Add(checkBox_auto_fetch);
             groupBox1.Controls.Add(checkBox_auto_startup);
-            groupBox1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            groupBox1.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             groupBox1.Location = new Point(831, 11);
             groupBox1.Name = "groupBox1";
             groupBox1.Size = new Size(805, 83);
