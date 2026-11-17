@@ -4,8 +4,6 @@ using STaTool.plc;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using WindowsInput;
-using WindowsInput.Native;
 
 namespace STaTool.utils {
     public partial class ImageButtonClickerToolForm: Form {
@@ -27,6 +25,11 @@ namespace STaTool.utils {
         private string _curveStoragePath;
         private volatile bool _plcFlagDetected = false;
         private const int _checkDelay = 500;
+        private const int _curveHeaderButtonIndex = 1;
+        private const int _saveButtonIndex = 4;
+        private const int _curveFileCheckAttempts = 10;
+        private const int _curveFileCheckDelay = 100;
+        private static readonly string[] _curveFiles = { "Curves graph_ang.crv", "Curves graph.crv" };
 
         public ImageButtonClickerToolForm(MainForm mainForm,
                                           List<string> imageButtons,
@@ -149,70 +152,26 @@ namespace STaTool.utils {
                     // 主循环
                     while (!token.IsCancellationRequested) {
                         if (_plcFlagDetected) {
-                            bool deleteFailed = false;
+                            bool roundSucceeded = true;
                             int count = 0;
 
                             while (count < repeatTimes && !token.IsCancellationRequested) {
-                                for (int i = 0; i < _imageButtons.Count; i++) {
-                                    token.ThrowIfCancellationRequested();
-
-                                    // 点击"保存"前一步删除曲线文件（不存在则跳过）
-                                    if (i == 4 && !string.IsNullOrEmpty(_curveStoragePath)) {
-                                        string[] curveFiles = { "Curves graph_ang.crv", "Curves graph.crv" };
-                                        foreach (var file in curveFiles) {
-                                            string filePath = Path.Combine(_curveStoragePath, file);
-                                            try {
-                                                if (File.Exists(filePath)) {
-                                                    File.Delete(filePath);
-                                                    WidgetUtils.AppendMsg($"已删除曲线文件: {file}");
-                                                }
-                                            } catch (Exception ex) {
-                                                deleteFailed = true;
-                                                log.Warn($"删除曲线文件失败: {filePath}", ex);
-                                                WidgetUtils.ShowWarningPopUp(
-                                                    $"曲线文件被占用，无法删除！\n\n" +
-                                                    $"文件: {file}\n" +
-                                                    $"路径: {_curveStoragePath}\n\n" +
-                                                    $"请手动关闭占用该文件的程序后重试。");
-                                                break;
-                                            }
-                                        }
-                                    }
-
-                                    if (deleteFailed) {
-                                        break;
-                                    }
-
-                                    string btnImg = FileUtil.GetImagePath(_imageButtons[i]);
-                                    if (i == 1) {
-                                        await clicker.ClickButtonByImage_Special(btnImg);
-                                    } else {
-                                        bool found = await clicker.ClickButtonByImage(btnImg);
-                                        if (!found) { // 找不到按钮的逻辑处理
-                                            if (i == 4) { // "保存"按钮
-                                                SimulateAltS(clicker.InputSimulator);
-                                            }
-                                        }
-                                    }
-
-                                    await Task.Delay(clickInterval, token);
-                                }
-
-                                if (!deleteFailed) {
+                                roundSucceeded = await RunRoundAsync(clicker, clickInterval, config.EnableSaveDialogNavigation, token);
+                                if (roundSucceeded) {
                                     count++;
                                     WidgetUtils.AppendMsg($"第 {count} 次曲线抓取完毕，结果：抓取成功");
                                 }
                                 break;
                             }
 
-                            if (deleteFailed) {
-                                // 向 PLC 报错，跳过本轮
-                                SetValueByResult(fx5UModbusClient, config.PlcFlagPos, true);
-                                WidgetUtils.AppendMsg("曲线文件删除失败，已跳过本轮抓取。");
-                            } else {
+                            if (roundSucceeded) {
                                 // 重置 PLC 标志位
                                 SetValueByResult(fx5UModbusClient, config.PlcFlagPos, false);
                                 WidgetUtils.AppendMsg("曲线抓取完成。已重置PLC标识。");
+                            } else {
+                                // 向 PLC 报错，跳过本轮
+                                SetValueByResult(fx5UModbusClient, config.PlcFlagPos, true);
+                                WidgetUtils.AppendMsg("本轮曲线抓取失败，已跳过本轮抓取。");
                             }
                         }
 
@@ -234,16 +193,73 @@ namespace STaTool.utils {
             }, token); // 将 token 传递到最外层的 Task.Run
         }
 
-        // 模拟 Alt + S
-        private void SimulateAltS(InputSimulator inputSimulator) {
-            // 按下 Alt 键
-            // VirtualKeyCode.MENU 代表 Alt 键
-            inputSimulator.Keyboard.KeyDown(VirtualKeyCode.MENU);
-            // 按下 S 键
-            // KeyPress 自动处理按下和释放
-            inputSimulator.Keyboard.KeyPress(VirtualKeyCode.VK_S);
-            // 释放 Alt 键
-            inputSimulator.Keyboard.KeyUp(VirtualKeyCode.MENU);
+        /// <summary>
+        /// 执行一轮按钮点击流程。任一环节失败会弹窗并返回 false。
+        /// </summary>
+        private async Task<bool> RunRoundAsync(ImageRecognitionClicker clicker, int clickInterval,
+                                               bool enableSaveDialogNavigation, CancellationToken token) {
+            DateTime roundStart = DateTime.Now;
+
+            for (int i = 0; i < _imageButtons.Count; i++) {
+                token.ThrowIfCancellationRequested();
+
+                // 点击"保存"前一步：先把另存为对话框导航到配置目录，再删除旧曲线文件
+                if (i == _saveButtonIndex && !string.IsNullOrEmpty(_curveStoragePath)) {
+                    if (enableSaveDialogNavigation) {
+                        clicker.NavigateSaveDialogTo(_curveStoragePath);
+                    }
+
+                    foreach (var file in _curveFiles) {
+                        string filePath = Path.Combine(_curveStoragePath, file);
+                        try {
+                            if (File.Exists(filePath)) {
+                                File.Delete(filePath);
+                                if (File.Exists(filePath)) {
+                                    throw new IOException("文件删除后仍然存在");
+                                }
+                                WidgetUtils.AppendMsg($"已删除曲线文件: {file}");
+                            }
+                        } catch (Exception ex) {
+                            log.Warn($"删除曲线文件失败: {filePath}", ex);
+                            WidgetUtils.ShowWarningPopUp(
+                                $"曲线文件被占用，无法删除！\n\n" +
+                                $"文件: {file}\n" +
+                                $"路径: {_curveStoragePath}\n\n" +
+                                $"请手动关闭占用该文件的程序后重试。");
+                            return false;
+                        }
+                    }
+                }
+
+                string btnImg = FileUtil.GetImagePath(_imageButtons[i]);
+                bool clicked = i == _curveHeaderButtonIndex
+                    ? await clicker.ClickButtonByImage_Special(btnImg)
+                    : await clicker.ClickButtonByImage(btnImg);
+                if (!clicked) {
+                    log.Warn($"按钮点击失败: {_imageButtons[i]}, 图片: {btnImg}");
+                    WidgetUtils.ShowErrorPopUp(
+                        $"按钮操作失败，已中止本轮抓取！\n\n" +
+                        $"按钮: {_imageButtons[i]}\n" +
+                        $"图片: {btnImg}\n\n" +
+                        $"请检查界面状态后重新触发。");
+                    return false;
+                }
+
+                await Task.Delay(clickInterval, token);
+            }
+
+            // 全部按钮点击完成后校验：配置目录中的曲线文件必须已在本轮被重新写入
+            if (!string.IsNullOrEmpty(_curveStoragePath)
+                && !await WaitForCurveFileSaved(_curveStoragePath, roundStart)) {
+                log.Warn($"保存后未在配置目录中发现新的曲线文件: {_curveStoragePath}");
+                WidgetUtils.ShowErrorPopUp(
+                    $"保存失败：配置目录中未发现新的曲线文件！\n\n" +
+                    $"路径: {_curveStoragePath}\n\n" +
+                    $"请检查「另存为」对话框中的路径是否正确。");
+                return false;
+            }
+
+            return true;
         }
 
         private void ActionsBeforeStarting(int repeatTimes, int clickInterval, int checkInterval, Config config) {
@@ -271,6 +287,26 @@ namespace STaTool.utils {
             } else {
                 client.WriteRegister(pos, (int) FinishType.ERROR);
             }
+        }
+
+        /// <summary>
+        /// 轮询检查配置目录中的曲线文件是否已在本轮被重新写入（最多等待约 1 秒）。
+        /// </summary>
+        private async Task<bool> WaitForCurveFileSaved(string storagePath, DateTime roundStart) {
+            for (int attempt = 0; attempt < _curveFileCheckAttempts; attempt++) {
+                try {
+                    foreach (var file in _curveFiles) {
+                        string filePath = Path.Combine(storagePath, file);
+                        if (File.Exists(filePath) && File.GetLastWriteTime(filePath) >= roundStart) {
+                            return true;
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.Warn($"检查曲线文件保存结果失败: {ex.Message}", ex);
+                }
+                await Task.Delay(_curveFileCheckDelay);
+            }
+            return false;
         }
 
         private void ButtonStopFetch_Click(object? sender, EventArgs e) {

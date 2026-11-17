@@ -1,146 +1,158 @@
 using log4net;
 using OpenCvSharp;
-using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using WindowsInput;
+using WindowsInput.Native;
 
 namespace STaTool.utils {
 
     public class ImageRecognitionClicker {
         private ILog log;
         private readonly InputSimulator _inputSimulator = new InputSimulator();
-        private const int RETRY_DELAY = 200;
+        private const int RETRY_DELAY = 100;
+        private const int LOCATE_RETRIES = 3;
+        private const int CLICK_ROUNDS = 3;
 
         public bool InitOk { get; set; } = true;
-        public InputSimulator InputSimulator => _inputSimulator;
 
         public ImageRecognitionClicker() {
             log = LogManager.GetLogger(GetType());
         }
 
         /// <summary>
-        /// 通过图像识别点击按钮
+        /// 通过图像识别点击按钮。点击前定位失败按 100ms 间隔重试，最多 3 次；
+        /// 点击后再次检测，图片消失视为点击成功，仍可见则重试点击，最多 3 轮。
         /// </summary>
         /// <param name="templateImagePath">按钮模板图片路径(PNG)</param>
         /// <param name="threshold">匹配阈值(0-1)</param>
         /// <returns>是否成功点击</returns>
-        public async Task<bool> ClickButtonByImage(string templateImagePath, int timeout = 5000, double threshold = 0.9) {
-            var stopwatch = Stopwatch.StartNew(); // 启动高精度计时器
-
-            while (stopwatch.ElapsedMilliseconds < timeout) {
-                try {
-                    // 1. 截取屏幕并确保格式正确
-                    using var screenCapture = CaptureScreen();
-
-                    // 2. 加载模板图像并确保格式正确
-                    using var templateImage = new Mat(templateImagePath, ImreadModes.Color);
-                    if (templateImage.Empty()) {
-                        log.Warn($"Cannot load image template, template [{templateImagePath}] is null.");
-                        stopwatch.Stop(); // 计时结束
-                        return false; // 模板加载失败，直接返回，不重试
-                    }
-
-                    // 3. 转换为相同颜色空间
-                    using var screenMat = new Mat();
-                    if (screenCapture.Channels() == 3)
-                        Cv2.CvtColor(screenCapture, screenMat, ColorConversionCodes.BGR2BGRA);
-                    else
-                        screenCapture.CopyTo(screenMat);
-
-                    using var templateMat = new Mat();
-                    if (templateImage.Channels() == 3)
-                        Cv2.CvtColor(templateImage, templateMat, ColorConversionCodes.BGR2BGRA);
-                    else
-                        templateImage.CopyTo(templateMat);
-
-                    // 4. 图像匹配
-                    var matchResult = MatchTemplate(screenMat, templateMat, threshold);
-
-                    if (matchResult.IsMatchFound) {
-                        // 5. 计算中心坐标并点击
-                        var centerX = matchResult.Location.X + (templateMat.Width / 2);
-                        var centerY = matchResult.Location.Y + (templateMat.Height / 2);
-
-                        ClickAt(centerX, centerY);
-
-                        stopwatch.Stop(); // 计时结束
-                        return true; // 成功找到并点击，返回 true
-                    }
-                    // 如果匹配失败，继续循环重试
-                } catch (Exception ex) {
-                    // 记录异常，但不立即返回，继续重试直到超时
-                    log.Warn($"Attempt to match button with image template [{templateImagePath}] failed at {DateTime.Now:HH:mm:ss.fff}. Error: {ex.Message}");
-                    // 注意：这里没有 return false，而是继续循环
-                }
-
-                // 每次尝试失败后，等待一会再进行下一次尝试 (非阻塞)
-                await Task.Delay(RETRY_DELAY);
+        public async Task<bool> ClickButtonByImage(string templateImagePath, double threshold = 0.9) {
+            using var templateMat = LoadTemplate(templateImagePath);
+            if (templateMat == null) {
+                return false;
             }
 
-            stopwatch.Stop(); // 计时结束
-                              // 如果超时仍未找到，记录警告并返回 false
-            log.Warn($"Cannot find matched button with image template [{templateImagePath}] within {timeout}ms.");
+            for (int loop = 1; loop <= CLICK_ROUNDS; loop++) {
+                // 点击前定位：最多重试 3 次
+                if (!await ClickOnce(templateMat, templateImagePath, threshold, clickBelow: false)) {
+                    return false;
+                }
+
+                // 点击后再次检测，图片消失视为点击成功
+                await Task.Delay(RETRY_DELAY);
+                if (FindTemplate(templateMat, templateImagePath, threshold, clickBelow: false) == null) {
+                    return true;
+                }
+
+                if (loop < CLICK_ROUNDS) {
+                    log.Warn($"Button [{templateImagePath}] is still visible after click, retrying ({loop}/{CLICK_ROUNDS}).");
+                }
+            }
+
+            log.Warn($"Button [{templateImagePath}] is still visible after {CLICK_ROUNDS} click attempts.");
             return false;
         }
 
-        public async Task<bool> ClickButtonByImage_Special(string templateImagePath, int timeout = 5000, double threshold = 0.9) {
-            var stopwatch = Stopwatch.StartNew(); // 启动高精度计时器
+        /// <summary>
+        /// 通过图像识别点击模板下方区域（曲线表头专用）。
+        /// 点击前定位失败按 100ms 间隔重试，最多 3 次；不做点击后校验。
+        /// </summary>
+        /// <param name="templateImagePath">按钮模板图片路径(PNG)</param>
+        /// <param name="threshold">匹配阈值(0-1)</param>
+        /// <returns>是否成功点击</returns>
+        public async Task<bool> ClickButtonByImage_Special(string templateImagePath, double threshold = 0.9) {
+            using var templateMat = LoadTemplate(templateImagePath);
+            if (templateMat == null) {
+                return false;
+            }
+            return await ClickOnce(templateMat, templateImagePath, threshold, clickBelow: true);
+        }
 
-            while (stopwatch.ElapsedMilliseconds < timeout) {
-                try {
-                    // 1. 截取屏幕并确保格式正确
-                    using var screenCapture = CaptureScreen();
+        /// <summary>
+        /// 将「另存为」对话框导航到指定目录：Ctrl+L 聚焦顶部地址栏，输入路径后回车。
+        /// </summary>
+        /// <param name="directoryPath">目标目录路径</param>
+        public void NavigateSaveDialogTo(string directoryPath) {
+            // 1. 聚焦顶部地址栏
+            _inputSimulator.Keyboard.ModifiedKeyStroke(VirtualKeyCode.CONTROL, VirtualKeyCode.VK_L);
+            _inputSimulator.Keyboard.Sleep(150);
 
-                    // 2. 加载模板图像并确保格式正确
-                    using var templateImage = new Mat(templateImagePath, ImreadModes.Color);
-                    if (templateImage.Empty()) {
-                        log.Warn($"Cannot load image template, template [{templateImagePath}] is null.");
-                        stopwatch.Stop(); // 计时结束
-                        return false; // 模板加载失败，直接返回，不重试
-                    }
+            // 2. 全选并输入目录路径（路径可能含中文，使用 Unicode 输入）
+            _inputSimulator.Keyboard.ModifiedKeyStroke(VirtualKeyCode.CONTROL, VirtualKeyCode.VK_A);
+            GlobalInputSimulator.SendUnicodeText(directoryPath);
+            _inputSimulator.Keyboard.Sleep(150);
 
-                    // 3. 转换为相同颜色空间
-                    using var screenMat = new Mat();
-                    if (screenCapture.Channels() == 3)
-                        Cv2.CvtColor(screenCapture, screenMat, ColorConversionCodes.BGR2BGRA);
-                    else
-                        screenCapture.CopyTo(screenMat);
+            // 3. 回车导航到该目录
+            _inputSimulator.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+            _inputSimulator.Keyboard.Sleep(300);
+        }
 
-                    using var templateMat = new Mat();
-                    if (templateImage.Channels() == 3)
-                        Cv2.CvtColor(templateImage, templateMat, ColorConversionCodes.BGR2BGRA);
-                    else
-                        templateImage.CopyTo(templateMat);
-
-                    // 4. 图像匹配
-                    var matchResult = MatchTemplate(screenMat, templateMat, threshold);
-
-                    if (matchResult.IsMatchFound) {
-                        // 5. 计算中心坐标并点击
-                        var centerX = matchResult.Location.X + (templateMat.Width / 2);
-                        var centerY = matchResult.Location.Y + (int) Math.Abs((templateMat.Height * 1.5));
-
-                        ClickAt(centerX, centerY);
-
-                        stopwatch.Stop(); // 计时结束
-                        return true; // 成功找到并点击，返回 true
-                    }
-                    // 如果匹配失败，继续循环重试
-                } catch (Exception ex) {
-                    // 记录异常，但不立即返回，继续重试直到超时
-                    log.Warn($"Attempt to match button with image template [{templateImagePath}] failed at {DateTime.Now:HH:mm:ss.fff}. Error: {ex.Message}");
-                    // 注意：这里没有 return false，而是继续循环
-                }
-
-                // 每次尝试失败后，等待一会再进行下一次尝试 (非阻塞)
-                await Task.Delay(RETRY_DELAY);
+        /// <summary>
+        /// 加载并转换模板图像，加载失败返回 null。
+        /// </summary>
+        private Mat? LoadTemplate(string templateImagePath) {
+            var templateImage = new Mat(templateImagePath, ImreadModes.Color);
+            if (templateImage.Empty()) {
+                templateImage.Dispose();
+                log.Warn($"Cannot load image template, template [{templateImagePath}] is null.");
+                return null;
             }
 
-            stopwatch.Stop(); // 计时结束
-                              // 如果超时仍未找到，记录警告并返回 false
-            log.Warn($"Cannot find matched button with image template [{templateImagePath}] within {timeout}ms.");
+            var templateMat = new Mat();
+            if (templateImage.Channels() == 3)
+                Cv2.CvtColor(templateImage, templateMat, ColorConversionCodes.BGR2BGRA);
+            else
+                templateImage.CopyTo(templateMat);
+
+            templateImage.Dispose();
+            return templateMat;
+        }
+
+        /// <summary>
+        /// 定位并点击一次，定位失败按 100ms 间隔重试，最多 3 次。
+        /// </summary>
+        private async Task<bool> ClickOnce(Mat templateMat, string templateImagePath, double threshold, bool clickBelow) {
+            for (int attempt = 1; attempt <= LOCATE_RETRIES; attempt++) {
+                var point = FindTemplate(templateMat, templateImagePath, threshold, clickBelow);
+                if (point.HasValue) {
+                    ClickAt(point.Value.X, point.Value.Y);
+                    return true;
+                }
+
+                if (attempt < LOCATE_RETRIES) {
+                    await Task.Delay(RETRY_DELAY);
+                }
+            }
+
+            log.Warn($"Cannot find matched button with image template [{templateImagePath}] after {LOCATE_RETRIES} attempts.");
             return false;
+        }
+
+        /// <summary>
+        /// 截屏并进行一次模板匹配，返回点击坐标；未匹配到返回 null。
+        /// </summary>
+        private System.Drawing.Point? FindTemplate(Mat templateMat, string templateImagePath, double threshold, bool clickBelow) {
+            try {
+                // CaptureScreen 始终返回 8UC4，与转换后的模板类型一致
+                using var screenMat = CaptureScreen();
+
+                var matchResult = MatchTemplate(screenMat, templateMat, threshold);
+                if (!matchResult.IsMatchFound) {
+                    return null;
+                }
+
+                return new System.Drawing.Point(
+                    matchResult.Location.X + (templateMat.Width / 2),
+                    clickBelow
+                        ? matchResult.Location.Y + (int) Math.Abs(templateMat.Height * 1.5)
+                        : matchResult.Location.Y + (templateMat.Height / 2)
+                );
+            } catch (Exception ex) {
+                // 记录异常，由调用方决定是否重试
+                log.Warn($"Attempt to match button with image template [{templateImagePath}] failed at {DateTime.Now:HH:mm:ss.fff}. Error: {ex.Message}");
+                return null;
+            }
         }
 
         /// <summary>

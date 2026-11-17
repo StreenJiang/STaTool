@@ -20,5 +20,6 @@ namespace STaTool.utils {
         public string CurveStoragePath { get; set; } = "";
         public bool AutoStartup { get; set; } = false;
         public bool AutoStartFetch { get; set; } = false;
+        public bool EnableSaveDialogNavigation { get; set; } = true;
     }
 }

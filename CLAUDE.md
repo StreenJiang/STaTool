@@ -84,4 +84,5 @@ dotnet run --project STaTool/STaTool.csproj
 - 应用要求 **管理员权限**（`app.manifest` 中 `requestedExecutionLevel` 设为 `requireAdministrator`），因为需要操作注册表实现自启动和全局键盘钩子。
 - TCP 通信使用固定长度 ASCII 协议，MID 位于消息第 4-8 位。`AnalyzeData()` 中解析 `0061` 消息的字段位置是硬编码的，修改协议时需要精确对齐偏移量。
 - 图像识别依赖屏幕分辨率 — 按钮模板图片必须在与实际运行时相同的分辨率和 DPI 下截取。
+- 自动抓取的重试/点击后校验/另存为路径导航属于**尚未现场验证**的机制，排查问题前先查看 `docs/verification.md` 中的待验证清单与回退方案。
 - 安装器项目 `StaToolSetup.vdproj` 只能在 Windows 上使用 Visual Studio 构建，`dotnet build` 不包含它。
